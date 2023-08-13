@@ -4,7 +4,6 @@ from environment import log
 from environment import get_config_value, get_int_config_value,workDir
 from re import compile, findall
 from collections import defaultdict
-from json import loads, dumps
 
 
 class Tokenizer:
@@ -59,27 +58,29 @@ class Tokenizer:
    def initialize_bpe(self):
       #Word frequenzen und vocab
       self.word_freqs = defaultdict(lambda: 0)
+      words = []
       for row in self.word_rows:
          for word in row:
             if (len(word) == 1 and word in self.punctuation):
                pass
             else:
                self.word_freqs['#'+word] =  self.word_freqs['#'+word]+1
+               words.append(word)
       
       self.alphabet = []
-      for word in self.word_freqs.keys():
+      for word in words:
          for letter in word:
             if letter not in self.alphabet:
                   self.alphabet.append(letter)
       self.alphabet.sort() 
-      
       log.info('Got '+str(len(self.word_freqs))+" words, with "+str(len(self.alphabet))+" chars alphabet")
       self.vocab = self.alphabet.copy()
-      self.merges = {}
+      self.vocab.append('#')
 
       
    def bpe(self):
       self.initialize_bpe()
+      self.merges = []
       def compute_pair_freqs(splits, word_freqs):
          pair_freqs = defaultdict(int)
          for word, freq in word_freqs.items():
@@ -116,14 +117,15 @@ class Tokenizer:
             if max_freq is None or max_freq < freq:
                best_pair = pair
                max_freq = freq
-         self.merges[best_pair[0]+best_pair[1]] =  best_pair
-         self.vocab.append(best_pair[0]+best_pair[1])
+         token = best_pair[0]+best_pair[1]
+         self.merges.append((best_pair[0], best_pair[1], token))
+         self.vocab.append(token)
          if (len(self.vocab)%25 == 0):
-            log.debug('Vocab size: '+str(len(self.vocab)))
+            log.debug('Vocab size: '+str(len(self.vocab))+', merges size: '+str(len(self.merges)))
          merge_pair(best_pair[0], best_pair[1], splits, self.word_freqs)
    
    def has_vocab(self):
-      return isfile(workDir+'vocab.txt') and isfile(workDir+'merges.json') and isfile(workDir+'alphabet.txt')
+      return isfile(workDir+'vocab.txt') and isfile(workDir+'merges.txt') and isfile(workDir+'alphabet.txt')
 
    def write_vocab(self):
       #Write alphabet to file
@@ -141,9 +143,10 @@ class Tokenizer:
          f.write(token+'\n')
       f.close()
       #Write merges to file
-      log.info('Writing merges to '+(workDir+'merges.json'))
-      f = open(workDir+'merges.json', 'w',encoding='utf8')
-      f.write(dumps(self.merges))
+      log.info('Writing merges to '+(workDir+'merges.txt'))
+      f = open(workDir+'merges.txt', 'w',encoding='utf8')
+      for merge in self.merges:
+         f.write(merge[0]+':'+merge[1]+':'+merge[2]+'\n')
       f.close()
 
    def generate_vocab(self):
@@ -156,8 +159,26 @@ class Tokenizer:
          self.vocab.append(ch)
       self.vocab.append('<end/>')
       log.info('Done. Executed '+str(len(self.merges))+' merges')
+      self.verify_vocab()
       self.write_vocab()
    
+   def verify_vocab(self):
+      log.info('Verifying vocab..')
+      assert(len(self.vocab) == len(self.alphabet)+1+len(self.merges)+len(self.punctuation)+1)
+      for i, token in enumerate(self.vocab):
+         if i < len(self.alphabet):
+            assert(token == self.alphabet[i], 'expected '+self.alphabet[i]+', but got '+token)
+         elif (i==len(self.alphabet)):
+            assert(token == '#', 'expected #, but got '+token)
+         elif (i>len(self.alphabet) and i<len(self.alphabet)+1+len(self.merges)):
+            merge = self.merges[i-len(self.alphabet)-1]
+            assert(token == merge[2],'expected '+merge[2]+', but got '+token)
+         elif (i>=len(self.alphabet)+1+len(self.merges) and i<len(self.vocab)-1):
+            assert(token == self.punctuation[i-len(self.alphabet)-1-len(self.merges)],'expected '+self.punctuation[i-len(self.alphabet)-1-len(self.merges)]+', but got '+token)
+         else:
+            assert(token == '<end/>','expected <end/>, but got '+token)
+      log.info('Done')
+
    def load_vocab(self):
       if (not self.has_vocab()):
          raise Exception('No vocab files found!')
@@ -176,9 +197,13 @@ class Tokenizer:
          self.vocab.append(line[:-1])
       log.info('Got '+str(len(self.vocab))+' tokens')
       #Read merges from file
-      log.info('Reading merges from '+(workDir+'merges.json'))
-      f = open(workDir+'merges.json', 'r',encoding='utf8')
-      text = f.read()
-      self.merges = loads(text)
+      log.info('Reading merges from '+(workDir+'merges.txt'))
+      f = open(workDir+'merges.txt', 'r',encoding='utf8')
+      lines = f.readlines()
+      self.merges = []
+      for line in lines:
+         merge = tuple(line[:-1].split(':'))
+         self.merges.append(merge)
       log.info('Got '+str(len(self.merges))+' merges')
+      self.verify_vocab()
       f.close()
