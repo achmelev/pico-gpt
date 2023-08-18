@@ -13,11 +13,9 @@ class Tokenizer:
       self.punctuation = get_config_value('punctuation_chars')
       wordPatternStr = r'\w[\w\’]*|['+self.punctuation+']'
       self.word_pattern = compile(wordPatternStr)
-      #log.debug('Word Pattern: '+wordPatternStr)
-      
+      self.has_words = False
+      self.vocab_prepared = False
    
-   def has_words(self):
-      return (self.word_rows != None)
    
    def wordTokenizeFile(self, file):
       f = open(file,'r',encoding='utf8')
@@ -39,6 +37,7 @@ class Tokenizer:
       return None
    
    def read_words(self, source):
+      assert not self.has_words, 'Words already loaded'
       #Build file list
       files = []
       if isfile(source):
@@ -54,6 +53,8 @@ class Tokenizer:
       self.word_rows = []
       for file in files:
          self.wordTokenizeFile(file)
+      
+      self.has_words = True
 
    def initialize_bpe(self):
       #Word frequenzen und vocab
@@ -150,8 +151,8 @@ class Tokenizer:
       f.close()
 
    def generate_vocab(self):
-      if (not self.has_words):
-         raise Exception('No words available')
+      assert not self.vocab_prepared, 'vocab already generated/loaded'
+      assert self.has_words, 'No words available'
       log.info('Generating vocab with '+str(get_int_config_value('vocab_size'))+' tokens...')
       self.bpe()
       #Append special tokens
@@ -161,27 +162,28 @@ class Tokenizer:
       log.info('Done. Executed '+str(len(self.merges))+' merges')
       self.verify_vocab()
       self.write_vocab()
+      self.vocab_prepared = True
    
    def verify_vocab(self):
       log.info('Verifying vocab..')
-      assert(len(self.vocab) == len(self.alphabet)+1+len(self.merges)+len(self.punctuation)+1)
+      assert len(self.vocab) == len(self.alphabet)+1+len(self.merges)+len(self.punctuation)+1
       for i, token in enumerate(self.vocab):
          if i < len(self.alphabet):
-            assert(token == self.alphabet[i], 'expected '+self.alphabet[i]+', but got '+token)
+            assert token == self.alphabet[i], 'expected '+self.alphabet[i]+', but got '+token
          elif (i==len(self.alphabet)):
-            assert(token == '#', 'expected #, but got '+token)
+            assert token == '#', 'expected #, but got '+token
          elif (i>len(self.alphabet) and i<len(self.alphabet)+1+len(self.merges)):
             merge = self.merges[i-len(self.alphabet)-1]
-            assert(token == merge[2],'expected '+merge[2]+', but got '+token)
+            assert token == merge[2],'expected '+merge[2]+', but got '+token
          elif (i>=len(self.alphabet)+1+len(self.merges) and i<len(self.vocab)-1):
-            assert(token == self.punctuation[i-len(self.alphabet)-1-len(self.merges)],'expected '+self.punctuation[i-len(self.alphabet)-1-len(self.merges)]+', but got '+token)
+            assert token == self.punctuation[i-len(self.alphabet)-1-len(self.merges)],'expected '+self.punctuation[i-len(self.alphabet)-1-len(self.merges)]+', but got '+token
          else:
-            assert(token == '<end/>','expected <end/>, but got '+token)
+            assert token == '<end/>','expected <end/>, but got '+token
       log.info('Done')
 
    def load_vocab(self):
-      if (not self.has_vocab()):
-         raise Exception('No vocab files found!')
+      assert not self.vocab_prepared, 'vocab already generated/loaded'
+      assert self.has_vocab(), 'No vocab files found!'
       #Read alphabet from file
       log.info('Reading alphabet from '+(workDir+'alphabet.txt'))
       f = open(workDir+'alphabet.txt', 'r',encoding='utf8')
@@ -207,3 +209,4 @@ class Tokenizer:
       log.info('Got '+str(len(self.merges))+' merges')
       self.verify_vocab()
       f.close()
+      self.vocab_prepared = True

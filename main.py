@@ -30,7 +30,6 @@ def do_tokenize(args):
         log.error("Wrong number of arguments for command vocab")
     else:
         tokenizer = Tokenizer()
-        log.info(args[0])
         tokenizer.load_vocab()
 
 if (command == 'init'):
