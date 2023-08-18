@@ -31,6 +31,8 @@ def do_tokenize(args):
     else:
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
+        result = tokenizer.tokenize(args[0])
+        log.info('Result: '+str(result))
 
 if (command == 'init'):
     do_init(args)

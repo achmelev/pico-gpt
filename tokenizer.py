@@ -16,6 +16,18 @@ class Tokenizer:
       self.has_words = False
       self.vocab_prepared = False
    
+   def setWordPatternFromAlphabet(self):
+      wordPatternStr = '['+self.alphabet+']+|['+self.punctuation+']'
+      self.word_pattern = compile(wordPatternStr)
+   
+   def wordTokenizeText(self, text):
+      words = []
+      for word in findall(self.word_pattern, text.replace('_','')):
+         if (len(word) == 1 and word in self.punctuation):
+            words.append(word)
+         else:
+            words.append('#'+word)
+      return words
    
    def wordTokenizeFile(self, file):
       f = open(file,'r',encoding='utf8')
@@ -30,7 +42,7 @@ class Tokenizer:
                self.word_rows.append(findall(self.word_pattern, current_text.replace('_','')))
                current_text = ''
       if (len(current_text) > 0):
-         self.word_rows.append(findall(self.word_pattern, current_text.replace('_','')))
+         self.word_rows.append(self.wordTokenizeText(current_text))
 
    def pre_tokenize(self, text):
       #pass
@@ -162,6 +174,7 @@ class Tokenizer:
       log.info('Done. Executed '+str(len(self.merges))+' merges')
       self.verify_vocab()
       self.write_vocab()
+      self.setWordPatternFromAlphabet()
       self.vocab_prepared = True
    
    def verify_vocab(self):
@@ -209,4 +222,23 @@ class Tokenizer:
       log.info('Got '+str(len(self.merges))+' merges')
       self.verify_vocab()
       f.close()
+      self.setWordPatternFromAlphabet()
       self.vocab_prepared = True
+   
+   def tokenize(self, text):
+      assert self.vocab_prepared, 'no vocab'
+      words = self.wordTokenizeText(text)
+      splits = [[l for l in word] for word in words]
+      for merge in self.merges:
+         for idx, split in enumerate(splits):
+            i = 0
+            while i < len(split) - 1:
+                if split[i] == merge[0] and split[i + 1] == merge[1]:
+                    split = split[:i] + [merge[2]] + split[i + 2 :]
+                else:
+                    i += 1
+            splits[idx] = split
+
+      return sum(splits, [])
+
+
