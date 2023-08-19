@@ -43,12 +43,8 @@ class Tokenizer:
                current_text = ''
       if (len(current_text) > 0):
          self.word_rows.append(self.wordTokenizeText(current_text))
-
-   def pre_tokenize(self, text):
-      #pass
-      return None
-   
-   def read_words(self, source):
+    
+   def init_files(self, source):
       assert not self.has_words, 'Words already loaded'
       #Build file list
       files = []
@@ -61,7 +57,10 @@ class Tokenizer:
          log.info("Reading from "+str(len(files))+" files  in "+source)
       else:
          raise Exception("unknown file "+source)
-
+      return files
+   
+   def read_words(self, source):
+      files = self.init_files(source)
       self.word_rows = []
       for file in files:
          self.wordTokenizeFile(file)
@@ -162,10 +161,11 @@ class Tokenizer:
          f.write(merge[0]+':'+merge[1]+':'+merge[2]+'\n')
       f.close()
 
-   def generate_vocab(self):
+   def generate_vocab(self, files):
       assert not self.vocab_prepared, 'vocab already generated/loaded'
       assert self.has_words, 'No words available'
       log.info('Generating vocab with '+str(get_int_config_value('vocab_size'))+' tokens...')
+      self.read_words(files)
       self.bpe()
       #Append special tokens
       for ch in self.punctuation:
@@ -225,7 +225,7 @@ class Tokenizer:
       self.setWordPatternFromAlphabet()
       self.vocab_prepared = True
    
-   def tokenize(self, text):
+   def tokenize_text(self, text):
       assert self.vocab_prepared, 'no vocab'
       words = self.wordTokenizeText(text)
       splits = [[l for l in word] for word in words]
@@ -240,5 +240,37 @@ class Tokenizer:
             splits[idx] = split
 
       return sum(splits, [])
+   
+   def tokenizeFile(self, file, vocab_map):
+      log.info('Tokenizing: '+file)
+      f = open(file,'r',encoding='utf8')
+      lines = f.readlines()
+      current_text = ""
+      result = []
+      for idx, line in enumerate(lines):
+         if ((idx+1)%100 == 0):
+            log.debug(str(idx+1)+'/'+str(len(lines)))
+         line = line[:len(line)-1]
+         if (len(line) > 0):
+            current_text+=' '+line
+         else:
+            if (len(current_text) > 0):
+               words = self.tokenize_text(current_text)
+               result = result + ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
+               current_text = ''
+      if (len(current_text) > 0):
+         words = self.tokenize_text(current_text)
+         result = result + ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
+
+      return result
+   
+   def tokenize(self, source):
+      assert self.vocab_prepared, 'no vocab'
+      vocab_map = {value: index for index, value in enumerate(self.vocab)}
+      files = self.init_files(source)
+      for file in files:
+         tokens = self.tokenizeFile(file, vocab_map)
+
+
 
 

@@ -14,16 +14,12 @@ args = None
 if (len(argv) > 3):
     args = argv[3:]
 
-def do_init(args):
-    log.debug('do_init')
-
 def do_vocab(args):
     if (args == None):
         log.error("Wrong number of arguments for command vocab")
     else:
         tokenizer = Tokenizer()
-        tokenizer.read_words(args[0])
-        tokenizer.generate_vocab()
+        tokenizer.generate_vocab(args[0])
 
 def do_tokenize(args):
     if (args == None):
@@ -32,13 +28,11 @@ def do_tokenize(args):
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
         result = tokenizer.tokenize(args[0])
-        log.info('Result: '+str(result))
 
-if (command == 'init'):
-    do_init(args)
-elif (command == 'vocab'):
+if (command == 'vocab'):
     do_vocab(args)
 elif (command == 'tokenize'):
     do_tokenize(args)
+
 
 
