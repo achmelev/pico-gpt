@@ -20,6 +20,11 @@ class Tokenizer:
       wordPatternStr = '['+self.alphabet+']+|['+self.punctuation+']'
       self.word_pattern = compile(wordPatternStr)
    
+   def areWordsSuitable(self, words):
+      result = any(c in words for c in self.punctuation) and len(list(filter(lambda x:x not in self.punctuation, words))) >= get_int_config_value('min_words_in_sentence')
+      return result
+      
+
    def wordTokenizeText(self, text):
       words = []
       for word in findall(self.word_pattern, text.replace('_','')):
@@ -29,21 +34,29 @@ class Tokenizer:
             words.append('#'+word)
       return words
    
-   def wordTokenizeFile(self, file):
+   def readLinesFromFile(self, file):
       f = open(file,'r',encoding='utf8')
       lines = f.readlines()
+      lines.append('\n')
       current_text = ""
+      result = []
       for line in lines:
-         line = line[:len(line)-1]
+         line = line[:len(line)-1].strip()
          if (len(line) > 0):
             current_text+=' '+line
          else:
             if (len(current_text) > 0):
-               self.word_rows.append(findall(self.word_pattern, current_text.replace('_','')))
+               result.append(current_text)    
                current_text = ''
-      if (len(current_text) > 0):
-         self.word_rows.append(self.wordTokenizeText(current_text))
-    
+      return result
+
+   def wordTokenizeFile(self, file):
+      lines = self.readLinesFromFile(file)
+      for line in lines:
+         words = self.wordTokenizeText(line)
+         if self.areWordsSuitable(words):
+            self.word_rows.append(words)
+
    def init_files(self, source):
       assert not self.has_words, 'Words already loaded'
       #Build file list
@@ -76,23 +89,23 @@ class Tokenizer:
             if (len(word) == 1 and word in self.punctuation):
                pass
             else:
-               self.word_freqs['#'+word] =  self.word_freqs['#'+word]+1
+               self.word_freqs[word] =  self.word_freqs[word]+1
                words.append(word)
       
       self.alphabet = []
       for word in words:
          for letter in word:
-            if letter not in self.alphabet:
+            if letter not in self.alphabet and not letter == '#':
                   self.alphabet.append(letter)
       self.alphabet.sort() 
       log.info('Got '+str(len(self.word_freqs))+" words, with "+str(len(self.alphabet))+" chars alphabet")
       self.vocab = self.alphabet.copy()
+      self.alphabet = ''.join(self.alphabet)
       self.vocab.append('#')
+      self.merges = []
 
       
    def bpe(self):
-      self.initialize_bpe()
-      self.merges = []
       def compute_pair_freqs(splits, word_freqs):
          pair_freqs = defaultdict(int)
          for word, freq in word_freqs.items():
@@ -163,9 +176,9 @@ class Tokenizer:
 
    def generate_vocab(self, files):
       assert not self.vocab_prepared, 'vocab already generated/loaded'
-      assert self.has_words, 'No words available'
       log.info('Generating vocab with '+str(get_int_config_value('vocab_size'))+' tokens...')
       self.read_words(files)
+      self.initialize_bpe()
       self.bpe()
       #Append special tokens
       for ch in self.punctuation:
@@ -228,6 +241,8 @@ class Tokenizer:
    def tokenize_text(self, text):
       assert self.vocab_prepared, 'no vocab'
       words = self.wordTokenizeText(text)
+      if not self.areWordsSuitable(words):
+         return None
       splits = [[l for l in word] for word in words]
       for merge in self.merges:
          for idx, split in enumerate(splits):
@@ -241,35 +256,31 @@ class Tokenizer:
 
       return sum(splits, [])
    
+   def verify_tokens(self, tokens):
+      assert self.vocab_prepared, 'no vocab'
+      log.info('Verifying tokens')
+      assert  not any(t not in self.vocab for t in tokens)
+
+   
    def tokenizeFile(self, file, vocab_map):
       log.info('Tokenizing: '+file)
-      f = open(file,'r',encoding='utf8')
-      lines = f.readlines()
-      current_text = ""
-      result = []
-      for idx, line in enumerate(lines):
-         if ((idx+1)%100 == 0):
-            log.debug(str(idx+1)+'/'+str(len(lines)))
-         line = line[:len(line)-1]
-         if (len(line) > 0):
-            current_text+=' '+line
-         else:
-            if (len(current_text) > 0):
-               words = self.tokenize_text(current_text)
-               result = result + ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
-               current_text = ''
-      if (len(current_text) > 0):
+      lines = self.readLinesFromFile(file)
+      for line in lines:
          words = self.tokenize_text(current_text)
-         result = result + ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
-
-      return result
-   
+         if self.areWordsSuitable(words):
+            tokenList = ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
+            self.tokens.append(tokenList)
+ 
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
       vocab_map = {value: index for index, value in enumerate(self.vocab)}
       files = self.init_files(source)
       for file in files:
-         tokens = self.tokenizeFile(file, vocab_map)
+         self.tokenizeFile(file, vocab_map)
+      
+      numberOfTokens = sum(len(row) for row in self.tokens)
+      log.info('Got '+numberOfTokens+' tokens')
+  
 
 
 

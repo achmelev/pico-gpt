@@ -29,10 +29,22 @@ def do_tokenize(args):
         tokenizer.load_vocab()
         result = tokenizer.tokenize(args[0])
 
+def do_tokenizetext(args):
+    if (args == None):
+        log.error("Wrong number of arguments for command vocab")
+    else:
+        tokenizer = Tokenizer()
+        tokenizer.load_vocab()
+        result = tokenizer.tokenize_text(args[0])
+        tokenizer.verify_tokens(result)
+        log.info("Result: "+str(result))
+
 if (command == 'vocab'):
     do_vocab(args)
 elif (command == 'tokenize'):
     do_tokenize(args)
+elif (command == 'tokenizetext'):
+    do_tokenizetext(args)
 
 
 
