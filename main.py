@@ -36,8 +36,11 @@ def do_tokenizetext(args):
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
         result = tokenizer.tokenize_text(args[0])
-        tokenizer.verify_tokens(result)
-        log.info("Result: "+str(result))
+        if (result):
+            tokenizer.verify_tokens(result)
+            log.info("Result: "+str(result))
+        else:
+            log.info("Too short or no punktuation")
 
 if (command == 'vocab'):
     do_vocab(args)

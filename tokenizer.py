@@ -21,7 +21,7 @@ class Tokenizer:
       self.word_pattern = compile(wordPatternStr)
    
    def areWordsSuitable(self, words):
-      result = any(c in words for c in self.punctuation) and len(list(filter(lambda x:x not in self.punctuation, words))) >= get_int_config_value('min_words_in_sentence')
+      result = len(words) >= get_int_config_value('min_words_in_sentence')
       return result
       
 
