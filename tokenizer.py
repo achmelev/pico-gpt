@@ -4,6 +4,7 @@ from environment import log
 from environment import get_config_value, get_int_config_value,workDir
 from re import compile, findall
 from collections import defaultdict
+import numpy as np
 
 
 class Tokenizer:
@@ -265,9 +266,13 @@ class Tokenizer:
    def tokenizeFile(self, file, vocab_map):
       log.info('Tokenizing: '+file)
       lines = self.readLinesFromFile(file)
-      for line in lines:
-         words = self.tokenize_text(current_text)
-         if self.areWordsSuitable(words):
+      percent = 10
+      for idx, line in enumerate(lines):
+         if ((idx+1) > percent*len(lines)/100):
+            log.debug('Line '+str(idx+1)+"/"+str(len(lines)))
+            percent = percent+10
+         words = self.tokenize_text(line)
+         if (words != None):
             tokenList = ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
             self.tokens.append(tokenList)
  
@@ -275,11 +280,27 @@ class Tokenizer:
       assert self.vocab_prepared, 'no vocab'
       vocab_map = {value: index for index, value in enumerate(self.vocab)}
       files = self.init_files(source)
+      self.tokens = []
       for file in files:
          self.tokenizeFile(file, vocab_map)
       
       numberOfTokens = sum(len(row) for row in self.tokens)
-      log.info('Got '+numberOfTokens+' tokens')
+      log.info('Got '+str(numberOfTokens)+' tokens')
+      log.info('Writing training and validation set...')
+      f = open(workDir+'train.bin', 'wb')
+      switchedToValidation = False
+      train_dataset_percent = get_int_config_value('train_dataset_percent')
+      tokensCounter = 0
+      for tokenList in self.tokens:
+         tokensCounter = tokensCounter + len(tokenList)
+         if not switchedToValidation: 
+            if tokensCounter > numberOfTokens*train_dataset_percent/100:
+               f.close()
+               f = open(workDir+'validate.bin', 'wb')
+               switchedToValidation = True
+         np_tokens = np.array(tokenList, dtype=np.uint16)
+         np_tokens.tofile(f)
+      f.close()
   
 
 
