@@ -24,6 +24,9 @@ class Tokenizer:
    def areWordsSuitable(self, words):
       result = len(words) >= get_int_config_value('min_words_in_sentence')
       return result
+   
+   def prepare_vocab_map(self):
+      self.vocab_map = {value: index for index, value in enumerate(self.vocab)}
       
 
    def wordTokenizeText(self, text):
@@ -190,6 +193,7 @@ class Tokenizer:
       self.verify_vocab()
       self.write_vocab()
       self.setWordPatternFromAlphabet()
+      self.prepare_vocab_map()
       self.vocab_prepared = True
    
    def verify_vocab(self):
@@ -239,6 +243,7 @@ class Tokenizer:
       log.info('Got '+str(len(self.merges))+' merges')
       self.verify_vocab()
       self.setWordPatternFromAlphabet()
+      self.prepare_vocab_map()
       self.vocab_prepared = True
    
    def tokenize_text(self, text):
@@ -259,13 +264,33 @@ class Tokenizer:
 
       return sum(splits, [])
    
+   def tokens_to_text(self, tokens):
+      assert  not any(t not in range(len(self.vocab)) for t in tokens)
+
+      result = ""
+      for t in tokens:
+         text_token = self.vocab[t]
+         if (text_token in self.punctuation):
+            result = result+text_token
+         elif(text_token == '<end/>'):
+            result = result+'\n\n'
+         else:
+            if (text_token[0] == '#'):
+               if (len(result) == 0):
+                  result = result + text_token[1:]
+               else:
+                  result = result + ' '+text_token[1:]
+            else:
+               result = result + text_token
+      return result
+         
    def verify_tokens(self, tokens):
       assert self.vocab_prepared, 'no vocab'
       log.info('Verifying tokens')
       assert  not any(t not in self.vocab for t in tokens)
 
    
-   def tokenizeFile(self, file, vocab_map):
+   def tokenizeFile(self, file):
       log.info('Tokenizing: '+file)
       lines = self.readLinesFromFile(file)
       percent = 10
@@ -275,16 +300,15 @@ class Tokenizer:
             percent = percent+10
          words = self.tokenize_text(line)
          if (words != None):
-            tokenList = ([vocab_map[w] for w in words])+[vocab_map['<end/>']]
+            tokenList = ([self.vocab_map[w] for w in words])+[self.vocab_map['<end/>']]
             self.tokens.append(tokenList)
  
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
-      vocab_map = {value: index for index, value in enumerate(self.vocab)}
       files = self.init_files(source)
       self.tokens = []
       for file in files:
-         self.tokenizeFile(file, vocab_map)
+         self.tokenizeFile(file)
       
       numberOfTokens = sum(len(row) for row in self.tokens)
       log.info('Got '+str(numberOfTokens)+' tokens')

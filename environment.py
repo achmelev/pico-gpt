@@ -44,33 +44,35 @@ def initEnv(name: str):
     global workDir
     global log
     global config
+
     #environmentName
     environmentName = name
     #Config
-    config = ConfigParser()
-    config.read('pico_gpt.conf')
+    if (config == None):
+        config = ConfigParser()
+        config.read('pico_gpt.conf')
     if (not config.has_section(environmentName)):
         raise Exception('Unknown environment name: '+environmentName)
     #Logging
     log = getLogger('pico_gpt')
-    ch = StreamHandler( stream=stdout)
-    #ch.emit('Test')
-    loglevelStr = get_config_value('loglevel')
-    if (loglevelStr.lower() == 'debug'):
-        log.setLevel(DEBUG)
-    elif (loglevelStr.lower() == 'info'):
-        log.setLevel(INFO)
-    elif (loglevelStr.lower() == 'warn'):
-        log.setLevel(WARN)
-    elif (loglevelStr.lower() == 'error'):
-        log.setLevel(ERROR)
-    elif (loglevelStr.lower() == 'fatal'):
-        log.setLevel(FATAL)
-    else:
-        raise Exception('Unknown log level: '+loglevelStr)
-    formatter = Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
-    ch.setFormatter(formatter)
-    log.addHandler(ch)
+    if (len(log.handlers) == 0):
+        ch = StreamHandler( stream=stdout)
+        loglevelStr = get_config_value('loglevel')
+        if (loglevelStr.lower() == 'debug'):
+            log.setLevel(DEBUG)
+        elif (loglevelStr.lower() == 'info'):
+            log.setLevel(INFO)
+        elif (loglevelStr.lower() == 'warn'):
+            log.setLevel(WARN)
+        elif (loglevelStr.lower() == 'error'):
+            log.setLevel(ERROR)
+        elif (loglevelStr.lower() == 'fatal'):
+            log.setLevel(FATAL)
+        else:
+            raise Exception('Unknown log level: '+loglevelStr)
+        formatter = Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
+        ch.setFormatter(formatter)
+        log.addHandler(ch)
     #Work Directory
     workDir = './work_'+environmentName+'/'
     if (isfile(workDir)):
