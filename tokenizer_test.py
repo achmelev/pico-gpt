@@ -2,6 +2,8 @@ import unittest
 
 from environment import initEnv
 from shutil import rmtree
+import numpy as np
+from os.path import join
 
 
 class TokenizerTest (unittest.TestCase):
@@ -42,6 +44,30 @@ class TokenizerTest (unittest.TestCase):
         text_again = tokenizer.tokens_to_text(tokens)
 
         self.assertEqual(text_again, target_text)
+    
+    def test_tokenize(self):
+        from environment import log, workDir
+        from tokenizer import Tokenizer
+        log.debug('TEST TOKENIZE')
+        tokenizer = Tokenizer()
+        input_file = __file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_input.txt'
+        tokenizer.generate_vocab(input_file)
+
+        tokenizer.tokenize(input_file)
+
+        train_data = np.memmap(join(workDir, 'train.bin'), dtype=np.uint16, mode='r')
+        val_data = np.memmap(join(workDir, 'val.bin'), dtype=np.uint16, mode='r')
+
+        all_tokens = np.concatenate((train_data, val_data))
+
+        text_again = tokenizer.tokens_to_text(all_tokens)
+        compare_file = open(__file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_cleaned.txt','r')
+        compare_text = compare_file.read()
+        compare_file.close()
+
+        self.assertEqual(len(text_again), len(compare_text))
+        self.assertEqual(text_again, compare_text)
+
 
         
 

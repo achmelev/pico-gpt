@@ -268,16 +268,19 @@ class Tokenizer:
       assert  not any(t not in range(len(self.vocab)) for t in tokens)
 
       result = ""
+      begin = True
       for t in tokens:
          text_token = self.vocab[t]
          if (text_token in self.punctuation):
             result = result+text_token
          elif(text_token == '<end/>'):
             result = result+'\n\n'
+            begin = True
          else:
             if (text_token[0] == '#'):
-               if (len(result) == 0):
+               if begin:
                   result = result + text_token[1:]
+                  begin = False
                else:
                   result = result + ' '+text_token[1:]
             else:
@@ -305,6 +308,8 @@ class Tokenizer:
  
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
+      self.word_rows = None
+      self.has_words = False
       files = self.init_files(source)
       self.tokens = []
       for file in files:
@@ -322,7 +327,7 @@ class Tokenizer:
          if not switchedToValidation: 
             if tokensCounter > numberOfTokens*train_dataset_percent/100:
                f.close()
-               f = open(workDir+'validate.bin', 'wb')
+               f = open(workDir+'val.bin', 'wb')
                switchedToValidation = True
          np_tokens = np.array(tokenList, dtype=np.uint16)
          np_tokens.tofile(f)
