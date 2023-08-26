@@ -38,6 +38,7 @@ class Tokenizer:
    def readLinesFromFile(self, file):
       f = open(file,'r',encoding='utf8')
       lines = f.readlines()
+      f.close()
       lines.append('\n')
       current_text = ""
       result = []
@@ -221,6 +222,7 @@ class Tokenizer:
       log.info('Reading vocab from '+(workDir+'vocab.txt'))
       f = open(workDir+'vocab.txt', 'r',encoding='utf8')
       lines = f.readlines()
+      f.close()
       self.vocab = []
       for line in lines:
          self.vocab.append(line[:-1])
@@ -229,13 +231,13 @@ class Tokenizer:
       log.info('Reading merges from '+(workDir+'merges.txt'))
       f = open(workDir+'merges.txt', 'r',encoding='utf8')
       lines = f.readlines()
+      f.close()
       self.merges = []
       for line in lines:
          merge = tuple(line[:-1].split(':'))
          self.merges.append(merge)
       log.info('Got '+str(len(self.merges))+' merges')
       self.verify_vocab()
-      f.close()
       self.setWordPatternFromAlphabet()
       self.vocab_prepared = True
    
