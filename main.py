@@ -8,6 +8,7 @@ initEnv(argv[1])
 
 from environment import log
 from tokenizer import Tokenizer
+from model import GPT
 
 command = argv[2]
 args = None
@@ -42,12 +43,17 @@ def do_tokenizetext(args):
         else:
             log.info("Too short or no punktuation")
 
+def do_train(args):
+    gpt = GPT()
+
 if (command == 'vocab'):
     do_vocab(args)
 elif (command == 'tokenize'):
     do_tokenize(args)
 elif (command == 'tokenizetext'):
     do_tokenizetext(args)
+elif (command == 'train'):
+    do_train(args)
 
 
 
