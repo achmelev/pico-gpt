@@ -3,12 +3,15 @@ from logging import Logger, StreamHandler, Formatter, getLogger, WARN, INFO, DEB
 from os.path import isfile, isdir
 from os import mkdir
 from sys import stdout
+import torch
 
 environmentName : str = None
 workDir: str = None
 
 config: ConfigParser = None
 log: Logger = None
+
+device: str = None
 
 def checkInitialized():
     global environmentName
@@ -44,6 +47,7 @@ def initEnv(name: str):
     global workDir
     global log
     global config
+    global device
 
     #environmentName
     environmentName = name
@@ -82,7 +86,19 @@ def initEnv(name: str):
     else:
         log.info('Creating environment work directory '+workDir)
         mkdir(workDir)
-     #Done
+
+    #Device
+    if torch.cuda.is_available():
+        log.info("CUDA is available")
+        if config.getboolean('use_cuda'):
+            device = 'cuda'
+        else:
+            device = 'cpu'
+    else:
+        log.info("CUDA isn't available")
+        device = 'cpu'
+    log.info("Using device "+device)
+
     log.info('Enviroment '+environmentName+' initialized.')
 
 
