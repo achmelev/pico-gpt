@@ -1,4 +1,4 @@
-from environment import initEnv
+from environment import initEnv, get_int_config_value
 from sys import argv
 
 if (len(argv) < 3):
@@ -9,6 +9,7 @@ initEnv(argv[1])
 from environment import log
 from tokenizer import Tokenizer
 from model import GPT
+from generator import TextGenerator
 
 command = argv[2]
 args = None
@@ -29,6 +30,15 @@ def do_tokenize(args):
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
         result = tokenizer.tokenize(args[0])
+
+def do_generate(args):
+    if (args == None):
+        log.error("Wrong number of arguments for command vocab")
+    else:
+        prompt = args[0]
+        generator = TextGenerator(prompt)
+        generator.generate_console()
+       
 
 def do_tokenizetext(args):
     if (args == None):
@@ -54,6 +64,8 @@ elif (command == 'tokenizetext'):
     do_tokenizetext(args)
 elif (command == 'train'):
     do_train(args)
+elif (command == 'generate'):
+    do_generate(args)
 
 
 

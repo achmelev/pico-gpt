@@ -68,13 +68,6 @@ class TokenizerTest (unittest.TestCase):
         self.assertEqual(len(text_again), len(compare_text))
         self.assertEqual(text_again, compare_text)
 
-
-        
-
-
-
-
-
 if __name__ == '__main__':
     unittest.main()
 
