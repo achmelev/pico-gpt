@@ -22,6 +22,7 @@ class Trainer:
         self.eval_interval = get_int_config_value('eval_interval')
         self.grad_clip = get_float_config_value('grad_clip')
         self.eval_iters = get_int_config_value('eval_iters')
+        self.log_interval = get_int_config_value('log_interval')
         
         #Model
         self.model = GPT()
@@ -95,7 +96,7 @@ class Trainer:
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
-            if (iter_counter == 1 or iter_counter%100 == 0):
+            if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.debug("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
             if iter_counter%self.eval_interval == 0:
