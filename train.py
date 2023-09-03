@@ -16,6 +16,7 @@ class Trainer:
         self.learning_rate = get_float_config_value('learning_rate')
         self.min_learning_rate = get_float_config_value('min_learning_rate')
         self.betas = (get_float_config_value('beta1'), get_float_config_value('beta2'))
+        self.decay_lr = get_bool_config_value('decay_lr')
         self.warmup_iters = get_int_config_value('warmup_iters')
         self.lr_decay_iters = get_int_config_value('lr_decay_iters')
         self.eval_interval = get_int_config_value('eval_interval')
@@ -58,7 +59,7 @@ class Trainer:
         if it > self.lr_decay_iters:
             return self.min_learning_rate
         # 3) in between, use cosine decay down to min learning rate
-        decay_ratio = (it - self.loaderwarmup_iters) / (self.lr_decay_iters - self.warmup_iters)
+        decay_ratio = (it - self.warmup_iters) / (self.lr_decay_iters - self.warmup_iters)
         assert 0 <= decay_ratio <= 1
         coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
         return self.min_learning_rate + coeff * (self.learning_rate - self.min_learning_rate)
@@ -69,43 +70,52 @@ class Trainer:
     def run(self):
         #Training loop
         epochCounter = 0
-        #First batch
-        train_batch = self.loader.batch()
         start_time = time()
         calculationTime = 0.0
-        running_loss = 0.0
         iter_counter = 0
 
         log.info("Starting training")
-        while True:
 
+        while True:
+            #Get next batch
+            train_batch = self.loader.batch()
+            #Set learning rate
+            # determine and set the learning rate for this iteration
+            lr = self.get_lr(iter_counter+1) if self.decay_lr else self.learning_rate
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = lr
             # zero the parameter gradients
             self.optimizer.zero_grad(set_to_none=True)
             # forward + backward + optimize
             calc_start_time = time()
             logits = self.model(train_batch[0])
             loss = self.calculate_loss(logits, train_batch[1])
-            running_loss = running_loss+loss.item()
             loss.backward()
             self.optimizer.step()
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
-            if (iter_counter%100 == 0):
-                log.debug("Iteration "+str(iter_counter)+", last loss = "+str(loss.item()))
+            if (iter_counter == 1 or iter_counter%100 == 0):
+                log.debug("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
                 validation_loss = 0.0
+                train_loss = 0.0
+                val_loss = 0.0
                 for it in range(self.eval_iters):
                     self.model.eval()
+                    train_batch = self.loader.batch()
+                    logits = self.model(train_batch[0])
+                    loss = self.calculate_loss(logits, train_batch[1])
+                    train_loss+=loss.item()
                     val_batch = self.loader.batch(train=False)
                     logits = self.model(val_batch[0])
                     loss = self.calculate_loss(logits, val_batch[1])
-                    validation_loss+=loss.item()
+                    val_loss+=loss.item()
                     self.model.train()
-                log.info('Epoch '+str(epochCounter)+" done, mean running loss = "+str(running_loss/self.eval_interval)+", mean validation loss = "+str(validation_loss/self.eval_iters))
+                log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(val_loss/self.eval_iters))
                 running_loss = 0.0
 
 
