@@ -10,6 +10,7 @@ from environment import log
 from tokenizer import Tokenizer
 from model import GPT
 from generator import TextGenerator
+from train import Trainer
 
 command = argv[2]
 args = None
@@ -25,7 +26,7 @@ def do_vocab(args):
 
 def do_tokenize(args):
     if (args == None):
-        log.error("Wrong number of arguments for command vocab")
+        log.error("Wrong number of arguments for command tokenize")
     else:
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
@@ -33,7 +34,7 @@ def do_tokenize(args):
 
 def do_generate(args):
     if (args == None):
-        log.error("Wrong number of arguments for command vocab")
+        log.error("Wrong number of arguments for command generate")
     else:
         prompt = args[0]
         generator = TextGenerator(prompt)
@@ -42,7 +43,7 @@ def do_generate(args):
 
 def do_tokenizetext(args):
     if (args == None):
-        log.error("Wrong number of arguments for command vocab")
+        log.error("Wrong number of arguments for command tokenizetext")
     else:
         tokenizer = Tokenizer()
         tokenizer.load_vocab()
@@ -54,7 +55,14 @@ def do_tokenizetext(args):
             log.info("Too short or no punktuation")
 
 def do_train(args):
-    gpt = GPT()
+    if (args == None):
+        log.error("Wrong number of arguments for command train")
+    else:
+        minutes_to_train = int(args[0])
+        trainer = Trainer(minutes_to_train)
+        trainer.run()
+        
+
 
 if (command == 'vocab'):
     do_vocab(args)
@@ -66,6 +74,8 @@ elif (command == 'train'):
     do_train(args)
 elif (command == 'generate'):
     do_generate(args)
+elif (command == 'train'):
+    do_train(args)
 
 
 
