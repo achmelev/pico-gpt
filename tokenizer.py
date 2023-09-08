@@ -70,8 +70,9 @@ class Tokenizer:
          files.append(source)
          log.info("Reading "+files[0])
       elif isdir(source):
-         files = listdir(source)
-         files.extend(files)
+         listing = listdir(source)
+         for f in listing:
+            files.append(source+f)
          log.info("Reading from "+str(len(files))+" files  in "+source)
       else:
          raise Exception("unknown file "+source)
