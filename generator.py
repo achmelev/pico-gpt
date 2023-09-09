@@ -30,8 +30,8 @@ class TextGenerator:
         self.model.eval()
         
         #Context
-        tokens = self.tokenizer.tokenize_text(prompt)
-        start_ids = [self.tokenizer.vocab_map[t] for t in tokens]
+        self.start_tokens = self.tokenizer.tokenize_text(prompt)
+        start_ids = [self.tokenizer.vocab_map[t] for t in self.start_tokens]
         self.ctx = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
 
 
@@ -59,30 +59,44 @@ class TextGenerator:
     def generate_console(self):
         print("#####################################################")
         token = None
-        line_length = len(self.prompt)
+        line_length = 0
         words_counter = 0
-        print(self.prompt,end="")
-        while (words_counter < self.max_words):
-            token = self.generate_token()
+        current_word = ""
+        prompt_counter = 0
+        while (True):
+            # Get next token
+            if (prompt_counter < len(self.start_tokens)):
+                token = self.start_tokens[prompt_counter]
+                prompt_counter+=1
+            else:
+                token = self.generate_token()
+
             if token == '<end/>':
-                print("\n")
+                if len(current_word) >0:
+                    print(current_word, end="")
+                if (words_counter > self.max_words):
+                    print("")
+                    break
+                print("\n")#Leerzeile
+                line_length = 0
+                current_word = ""
             elif token[0] == '#':
                 if (line_length == 0):
-                    print(token[1:], end="")
-                    line_length = line_length + len(token) -1
+                    if len(current_word) >0:
+                        print(current_word, end="")#Aktuelles Wort
+                    line_length = line_length + len(current_word)
+                    current_word = token[1:]
                 else:
-                    print(' '+token[1:], end="")
-                    line_length = line_length + len(token)
+                    if len(current_word)>0:
+                        print(' '+current_word, end = "")#Aktuelles Wort
+                    line_length = line_length + len(current_word)+1
+                    current_word = token[1:]
                 words_counter = words_counter +1
-            else:
-                print(token,end="")
-
-            if (token != '<end/>'):
-                line_length = line_length + len(token)
                 if (line_length > self.max_line_length):
-                    print("")
+                    print("")#Zeilenumbruch
                     line_length = 0
-        print("")
+            else:
+                current_word = current_word+token
         print("#####################################################")
 
 
