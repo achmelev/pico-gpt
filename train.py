@@ -194,7 +194,7 @@ class Trainer:
                 log.info("Stopping because no improvement since "+str(min_val_loss_counter)+" epochs")
                 break
         log.info("######################################Validation Report#######################################################")
-        log.info("Training done in "+get_time_sum_fmt('loop')+", got best validation loss of "+str(min_val_loss))
+        log.info("Training done in "+get_time_sum_fmt('loop')+", got best validation loss of "+str(self.state['min_val_loss']))
         log.info("###############################################################################################################")
 
 
