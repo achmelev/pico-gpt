@@ -73,7 +73,10 @@ class TextGenerator:
 
             if token == '<end/>':
                 if len(current_word) >0:
-                    print(current_word, end="")
+                    if (line_length == 0):
+                        print(current_word, end="")
+                    else:
+                        print(" "+current_word, end="")
                 if (words_counter > self.max_words):
                     print("")
                     break
