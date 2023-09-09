@@ -9,6 +9,7 @@ from time import time
 from torch.nn import functional as F
 from timers import create_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg
 from os.path import isfile
+from pickle import dump, load
 
 class Trainer:
     def __init__(self, minutes_to_train):
@@ -26,14 +27,18 @@ class Trainer:
         self.eval_iters = get_int_config_value('eval_iters')
         self.log_interval = get_int_config_value('log_interval')
         self.max_epochs_without_improvement = get_int_config_value('max_epochs_without_improvement')
+
+        #State
+        self.state_file = workDir+"state_dict.bin"
+        self.state = {'lr_counter':0, 'min_val_loss': float("inf")}
+        self.resuming = False
         
         #Model
         self.model_file = workDir+"model_dict.bin"
         self.model = GPT()
-        if (isfile(self.model_file)):
-            log.info("Loading model from "+self.model_file)
-            self.model.load_state_dict(torch.load(self.model_file))
 
+        #Resuming from last checkpoint, or partly from pretrained model
+        self.resume()
 
         #Data Loader
         self.loader = DataLoader()
@@ -75,6 +80,25 @@ class Trainer:
 
     def calculate_loss(self, logits, targets):
         return F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+    
+    def write_checkpoint(self):
+        log.info("Saving model to "+self.model_file)
+        torch.save(self.model.state_dict(), self.model_file)
+        log.info("Saving state to "+self.state_file)
+        f = open (self.state_file,"wb")
+        dump(self.state, f)
+        f.close()
+    
+    def resume(self):
+         if (isfile(self.model_file)):
+            log.info("Loading model from "+self.model_file)
+            self.model.load_state_dict(torch.load(self.model_file))
+         if (isfile(self.state_file)):
+             log.info("Loading state from "+self.state_file)
+             f = open (self.state_file,"rb")
+             self.state = load(f)
+             f.close()
+             self.resuming = True
 
     def run(self):
         #Training loop
@@ -82,7 +106,6 @@ class Trainer:
         start_time = time()
         calculationTime = 0.0
         iter_counter = 0
-        min_val_loss = float("inf")
         min_val_loss_counter = 0
         
 
@@ -97,6 +120,8 @@ class Trainer:
         log.info("Starting training for "+str(self.minutes_to_train)+" minutes")
         log.info("The model has "+str(self.model.get_num_params())+" parameters")
         print_config()
+        if (self.resuming):
+            log.info("Resuming from saved state with min_val_loss = "+str(self.state['min_val_loss']))
         log.info("################################################################################")
 
         while True:
@@ -106,7 +131,7 @@ class Trainer:
             train_batch = self.loader.batch()
             #Set learning rate
             # determine and set the learning rate for this iteration
-            lr = self.get_lr(iter_counter+1) if self.decay_lr else self.learning_rate
+            lr = self.get_lr(self.state['lr_counter']+1) if self.decay_lr else self.learning_rate
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = lr
             # zero the parameter gradients
@@ -120,6 +145,7 @@ class Trainer:
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
+            self.state['lr_counter'] = self.state['lr_counter']+1
             stop('train')
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
@@ -150,14 +176,13 @@ class Trainer:
                 log.info('Has been running since '+get_time_sum_fmt('loop'))
                 log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration")
                 log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
-                if (current_val_loss < min_val_loss):
-                    min_val_loss = current_val_loss
+                if (current_val_loss < self.state['min_val_loss']):
+                    self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
-                    log.info("Saving model to "+self.model_file)
-                    torch.save(self.model.state_dict(), self.model_file)
+                    self.write_checkpoint()
                 else:
                     min_val_loss_counter+=1
-                    log.info("No improvement to best validation loss "+str(min_val_loss)+" since "+str(min_val_loss_counter)+" epochs")
+                    log.info("No improvement to best validation loss "+str(self.state['min_val_loss'])+" since "+str(min_val_loss_counter)+" epochs")
                 log.info("###############################################################################################################")
                 running_loss = 0.0
             else:
