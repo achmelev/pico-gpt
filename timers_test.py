@@ -1,8 +1,8 @@
 import unittest
-from profile import create_timer, start, stop, get_time_sum_fmt, get_time_avg_fmt, get_count
 from time import sleep
+from timers import create_timer, get_count, get_time_avg_fmt, get_time_sum_fmt, start, stop
 
-class ProfilerTest(unittest.TestCase):
+class TimerTest(unittest.TestCase):
 
     def test_timer(self):
         create_timer('test')
