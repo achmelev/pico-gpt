@@ -25,6 +25,7 @@ class GPTConfig:
     n_embd: int
     dropout: float
     bias: bool
+    
 
 _config = None
 
@@ -40,8 +41,12 @@ def get_config():
         result.dropout = get_float_config_value('dropout')
         result.bias = get_bool_config_value('bias')
         _config = result
-        log.debug('Model config: block size = '+str(_config.block_size)+', number of layers = '+str(_config.n_layer)+', number of heads = '+str(_config.n_head)+', embedding size = '+str(_config.n_embd)+', dropout = '+str(_config.dropout)+', bias = '+str(_config.bias))
     return _config
+
+def print_config():
+    global _config
+    get_config()
+    log.info('Model config: block size = '+str(_config.block_size)+', number of layers = '+str(_config.n_layer)+', number of heads = '+str(_config.n_head)+', embedding size = '+str(_config.n_embd)+', dropout = '+str(_config.dropout)+', bias = '+str(_config.bias)) 
 
 
 

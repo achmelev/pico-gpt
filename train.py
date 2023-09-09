@@ -1,12 +1,14 @@
-from environment import log, get_float_config_value, get_bool_config_value,get_int_config_value, device
+from environment import log, get_float_config_value, get_bool_config_value,get_int_config_value, device, workDir
 
-from model import GPT
+from model import GPT, print_config
 from data import DataLoader
 import inspect
 import math
 import torch
 from time import time
 from torch.nn import functional as F
+from timers import create_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count
+from os.path import isfile
 
 class Trainer:
     def __init__(self, minutes_to_train):
@@ -25,7 +27,12 @@ class Trainer:
         self.log_interval = get_int_config_value('log_interval')
         
         #Model
+        self.model_file = workDir+"model_dict.bin"
         self.model = GPT()
+        if (isfile(self.model_file)):
+            log.info("Loading model from "+self.model_file)
+            self.model.load_state_dict(torch.load(self.model_file))
+
 
         #Data Loader
         self.loader = DataLoader()
@@ -74,10 +81,26 @@ class Trainer:
         start_time = time()
         calculationTime = 0.0
         iter_counter = 0
+        min_val_loss = float("inf")
+        min_val_loss_counter = 0
+        
 
-        log.info("Starting training")
+        #Timers
+        create_timer('iteration')
+        create_timer('batch')
+        create_timer('train')
+        create_timer('validate')
+        
+
+        #Start message
+        log.info("################################################################################")
+        log.info("Starting training for "+str(self.minutes_to_train)+" minutes")
+        log.info("The model has "+str(self.model.get_num_params())+" parameters")
+        print_config()
+        log.info("################################################################################")
 
         while True:
+            start('iteration')
             #Get next batch
             train_batch = self.loader.batch()
             #Set learning rate
@@ -97,7 +120,7 @@ class Trainer:
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
-                log.debug("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
+                log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
@@ -116,8 +139,25 @@ class Trainer:
                     loss = self.calculate_loss(logits, val_batch[1])
                     val_loss+=loss.item()
                     self.model.train()
-                log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(val_loss/self.eval_iters))
+                log.info("######################################Validation Report#######################################################")
+                current_val_loss = val_loss/self.eval_iters
+                log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
+                if (current_val_loss < min_val_loss):
+                    min_val_loss = current_val_loss
+                    min_val_loss_counter = 0
+                    log.info("Saving model to "+self.model_file)
+                    torch.save(self.model.state_dict(), self.model_file)
+                else:
+                    log.info("No improvement to best validation loss "+str(min_val_loss)+" since "+str(min_val_loss_counter)+" epochs")
+                log.info("###############################################################################################################")
                 running_loss = 0.0
+            stop('iteration')
+            if (get_time_sum('iteration')>self.minutes_to_train*60.0):
+                log.info("Time is up, stopping training")
+                break
+        log.info("######################################Validation Report#######################################################")
+        log.info("Training done in "+get_time_sum_fmt('iteration')+", got best validation loss of "+str(min_val_loss))
+        log.info("###############################################################################################################")
 
 
 

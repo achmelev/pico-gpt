@@ -1,9 +1,10 @@
-from environment import log, device, get_int_config_value, get_float_config_value
+from environment import log, device, get_int_config_value, get_float_config_value, workDir
 from tokenizer import Tokenizer
 from model import GPT
 
 import torch
 from torch.nn import functional as F
+from os.path import isfile
 
 class TextGenerator:
 
@@ -22,6 +23,10 @@ class TextGenerator:
         self.tokenizer.load_vocab()
         #Model
         self.model = GPT()
+        self.model_file = workDir+"model_dict.bin"
+        if (isfile(self.model_file)):
+            log.info("Loading model from "+self.model_file)
+            self.model.load_state_dict(torch.load(self.model_file))
         self.model.eval()
         
         #Context
