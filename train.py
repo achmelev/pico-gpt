@@ -7,7 +7,7 @@ import math
 import torch
 from time import time
 from torch.nn import functional as F
-from timers import create_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count
+from timers import create_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg
 from os.path import isfile
 
 class Trainer:
@@ -25,6 +25,7 @@ class Trainer:
         self.grad_clip = get_float_config_value('grad_clip')
         self.eval_iters = get_int_config_value('eval_iters')
         self.log_interval = get_int_config_value('log_interval')
+        self.max_epochs_without_improvement = get_int_config_value('max_epochs_without_improvement')
         
         #Model
         self.model_file = workDir+"model_dict.bin"
@@ -86,8 +87,7 @@ class Trainer:
         
 
         #Timers
-        create_timer('iteration')
-        create_timer('batch')
+        create_timer('loop')
         create_timer('train')
         create_timer('validate')
         
@@ -100,7 +100,8 @@ class Trainer:
         log.info("################################################################################")
 
         while True:
-            start('iteration')
+            start('loop')
+            start('train')
             #Get next batch
             train_batch = self.loader.batch()
             #Set learning rate
@@ -119,6 +120,7 @@ class Trainer:
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
+            stop('train')
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
@@ -129,6 +131,7 @@ class Trainer:
                 train_loss = 0.0
                 val_loss = 0.0
                 for it in range(self.eval_iters):
+                    start('validate')
                     self.model.eval()
                     train_batch = self.loader.batch()
                     logits = self.model(train_batch[0])
@@ -139,24 +142,34 @@ class Trainer:
                     loss = self.calculate_loss(logits, val_batch[1])
                     val_loss+=loss.item()
                     self.model.train()
-                log.info("######################################Validation Report#######################################################")
+                    stop('validate')
+                stop('loop')
+                log.info("######################################Epoch Report#######################################################")
                 current_val_loss = val_loss/self.eval_iters
                 log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
+                log.info('Has been running since '+get_time_sum_fmt('loop'))
+                log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration")
+                log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
                 if (current_val_loss < min_val_loss):
                     min_val_loss = current_val_loss
                     min_val_loss_counter = 0
                     log.info("Saving model to "+self.model_file)
                     torch.save(self.model.state_dict(), self.model_file)
                 else:
+                    min_val_loss_counter+=1
                     log.info("No improvement to best validation loss "+str(min_val_loss)+" since "+str(min_val_loss_counter)+" epochs")
                 log.info("###############################################################################################################")
                 running_loss = 0.0
-            stop('iteration')
-            if (get_time_sum('iteration')>self.minutes_to_train*60.0):
+            else:
+                stop('loop')
+            if (get_time_sum('loop')>self.minutes_to_train*60.0):
                 log.info("Time is up, stopping training")
                 break
+            if (min_val_loss_counter >= self.max_epochs_without_improvement):
+                log.info("Stopping because no improvement since "+str(min_val_loss_counter)+" epochs")
+                break
         log.info("######################################Validation Report#######################################################")
-        log.info("Training done in "+get_time_sum_fmt('iteration')+", got best validation loss of "+str(min_val_loss))
+        log.info("Training done in "+get_time_sum_fmt('loop')+", got best validation loss of "+str(min_val_loss))
         log.info("###############################################################################################################")
 
 
