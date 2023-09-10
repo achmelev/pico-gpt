@@ -34,11 +34,11 @@ def do_tokenize(args):
 
 def do_generate(args):
     if (args == None):
-        log.error("Wrong number of arguments for command generate")
+        prompt = ""
     else:
         prompt = args[0]
-        generator = TextGenerator(prompt)
-        generator.generate_console()
+    generator = TextGenerator(prompt)
+    generator.generate_console()
        
 
 def do_tokenizetext(args):

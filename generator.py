@@ -11,7 +11,6 @@ class TextGenerator:
     def __init__(self, prompt) -> None:
 
         #Parameters
-        self.prompt = prompt
         self.block_size = get_int_config_value('block_size')
         self.temperature = get_float_config_value('temperature')
         self.top_k = get_int_config_value('top_k')
@@ -31,6 +30,9 @@ class TextGenerator:
         
         #Context
         self.start_tokens = self.tokenizer.tokenize_text(prompt)
+        if (self.start_tokens == None):
+            self.start_tokens = ['<end/>']
+
         start_ids = [self.tokenizer.vocab_map[t] for t in self.start_tokens]
         self.ctx = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
 
