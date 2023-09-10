@@ -177,7 +177,7 @@ class GPT(nn.Module):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.n_layer))
 
 
-    def get_num_params(self, non_embedding=True):
+    def get_num_params(self, non_embedding=False):
         """
         Return the number of parameters in the model.
         For non-embedding count (default), the position embeddings get subtracted.
