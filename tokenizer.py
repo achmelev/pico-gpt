@@ -55,7 +55,8 @@ class Tokenizer:
                current_text = ''
       return result
 
-   def wordTokenizeFile(self, file):
+   def wordTokenizeFile(self, file, index):
+      log.info(str(index)+'. Importing '+str(file))
       lines = self.readLinesFromFile(file)
       for line in lines:
          words = self.wordTokenizeText(line)
@@ -81,8 +82,8 @@ class Tokenizer:
    def read_words(self, source):
       files = self.init_files(source)
       self.word_rows = []
-      for file in files:
-         self.wordTokenizeFile(file)
+      for index, file in enumerate(files):
+         self.wordTokenizeFile(file, index)
       
       self.has_words = True
 
