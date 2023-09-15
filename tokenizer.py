@@ -14,7 +14,6 @@ class Tokenizer:
       self.punctuation = get_config_value('punctuation_chars')
       wordPatternStr = r'\w[\w\’]*|['+self.punctuation+']'
       self.word_pattern = compile(wordPatternStr)
-      self.has_words = False
       self.vocab_prepared = False
    
    def setWordPatternFromAlphabet(self):
@@ -55,16 +54,16 @@ class Tokenizer:
                current_text = ''
       return result
 
-   def wordTokenizeFile(self, file, index):
-      log.info(str(index)+'. Importing '+str(file))
+   def wordTokenizeFile(self, file):
+      word_rows = []
       lines = self.readLinesFromFile(file)
       for line in lines:
          words = self.wordTokenizeText(line)
          if self.areWordsSuitable(words):
-            self.word_rows.append(words)
+            word_rows.append(words)
+      return word_rows
 
    def init_files(self, source):
-      assert not self.has_words, 'Words already loaded'
       #Build file list
       files = []
       if isfile(source):
@@ -79,28 +78,22 @@ class Tokenizer:
          raise Exception("unknown file "+source)
       return files
    
-   def read_words(self, source):
-      files = self.init_files(source)
-      self.word_rows = []
-      for index, file in enumerate(files):
-         self.wordTokenizeFile(file, index)
-      
-      self.has_words = True
-
-   def initialize_bpe(self):
+   def initialize_bpe(self, file):
       #Word frequenzen und vocab
+      files = self.init_files(file)
       self.word_freqs = defaultdict(lambda: 0)
-      words = []
-      for row in self.word_rows:
-         for word in row:
-            if (len(word) == 1 and word in self.punctuation):
-               pass
-            else:
-               self.word_freqs[word] =  self.word_freqs[word]+1
-               words.append(word)
+      for i, f in enumerate(files):
+         log.info(str(i+1)+'. Importing '+str(file))
+         word_rows = self.wordTokenizeFile(f)
+         for row in word_rows:
+            for word in row:
+               if (len(word) == 1 and word in self.punctuation):
+                  pass
+               else:
+                  self.word_freqs[word] =  self.word_freqs[word]+1
       
       self.alphabet = []
-      for word in words:
+      for word in self.word_freqs.keys():
          for letter in word:
             if letter not in self.alphabet and not letter == '#':
                   self.alphabet.append(letter)
@@ -184,8 +177,7 @@ class Tokenizer:
    def generate_vocab(self, files):
       assert not self.vocab_prepared, 'vocab already generated/loaded'
       log.info('Generating vocab with '+str(get_int_config_value('vocab_size'))+' tokens...')
-      self.read_words(files)
-      self.initialize_bpe()
+      self.initialize_bpe(files)
       self.bpe()
       #Append special tokens
       for ch in self.punctuation:
@@ -310,8 +302,6 @@ class Tokenizer:
  
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
-      self.word_rows = None
-      self.has_words = False
       files = self.init_files(source)
       self.tokens = []
       for file in files:
