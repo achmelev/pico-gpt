@@ -1,5 +1,5 @@
 from os.path import isfile, isdir 
-from os import listdir
+from os import listdir, remove
 from environment import log
 from environment import get_config_value, get_int_config_value,workDir
 from re import compile, findall
@@ -290,6 +290,7 @@ class Tokenizer:
    def tokenizeFile(self, file):
       log.info('Tokenizing: '+file)
       lines = self.readLinesFromFile(file)
+      tokens = []
       percent = 10
       for idx, line in enumerate(lines):
          if ((idx+1) > percent*len(lines)/100):
@@ -298,32 +299,55 @@ class Tokenizer:
          words = self.tokenize_text(line)
          if (words != None):
             tokenList = ([self.vocab_map[w] for w in words])+[self.vocab_map['<end/>']]
-            self.tokens.append(tokenList)
+            tokens.append(tokenList)
+      return tokens
  
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
-      files = self.init_files(source)
-      self.tokens = []
-      for file in files:
-         self.tokenizeFile(file)
-      
-      numberOfTokens = sum(len(row) for row in self.tokens)
-      log.info('Got '+str(numberOfTokens)+' tokens')
-      log.info('Writing training and validation set...')
-      f = open(workDir+'train.bin', 'wb')
-      switchedToValidation = False
+
+      log.info('Tokenizing...')
+      tmpf = open(workDir+'temp.bin', 'wb')
       train_dataset_percent = get_int_config_value('train_dataset_percent')
       tokensCounter = 0
-      for tokenList in self.tokens:
-         tokensCounter = tokensCounter + len(tokenList)
-         if not switchedToValidation: 
+      listLengths = []
+      files = self.init_files(source)
+      for file in files:
+         tokens = self.tokenizeFile(file)
+         for tokenList in tokens:
+            listLengths.append(len(tokenList))
+            tokensCounter = tokensCounter + len(tokenList)
+            np_tokens = np.array(tokenList, dtype=np.uint16)
+            np_tokens.tofile(tmpf)
+      tmpf.close()
+      log.info('Done. Got '+str(tokensCounter)+' tokens')
+
+      log.info("Writing train and validation set...")
+      switchedToValidation = False
+      tmpdata =  np.memmap(workDir+'temp.bin', dtype=np.uint16, mode='r')
+      f = open(workDir+'train.bin', 'wb')
+      numberOfTokens = tokensCounter
+      tokensCounter = 0
+      for l in listLengths:
+         array = tmpdata[tokensCounter:tokensCounter+l]
+         tokensCounter+=l
+         if not switchedToValidation:
             if tokensCounter > numberOfTokens*train_dataset_percent/100:
                f.close()
                f = open(workDir+'val.bin', 'wb')
                switchedToValidation = True
-         np_tokens = np.array(tokenList, dtype=np.uint16)
-         np_tokens.tofile(f)
+         array.tofile(f)
       f.close()
+      tmpdata._mmap.close()
+      remove(workDir+'temp.bin')
+      log.info("Done")
+
+
+      
+
+
+      if not switchedToValidation: 
+               if tokensCounter > numberOfTokens*train_dataset_percent/100:
+                  switchedToValidation = True
   
 
 
