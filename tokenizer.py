@@ -130,11 +130,11 @@ class Tokenizer:
                   if split[i] == a and split[i + 1] == b:
                      #Update pair freqs
                      if (i>0):
-                        if (pair_freqs[(split[i], a)] <= freq):
-                           del pair_freqs[(split[i], a)]
+                        if (pair_freqs[(split[i-1], a)] <= freq):
+                           del pair_freqs[(split[i-1], a)]
                         else:
-                          pair_freqs[(split[i], a)]-= freq
-                        pair_freqs[(split[i], newtoken)]+=freq
+                          pair_freqs[(split[i-1], a)]-= freq
+                        pair_freqs[(split[i-1], newtoken)]+=freq
                      if (i+2 < len(split)):
                         if (pair_freqs[(b, split[i+2])] <= freq):
                            del pair_freqs[(b, split[i+2])]
