@@ -117,15 +117,30 @@ class Tokenizer:
                   pair_freqs[pair] += freq
          return pair_freqs
       
-      def merge_pair(a, b, splits, word_freqs):
+      def merge_pair(a, b, splits, word_freqs, pair_freqs):
          for word in word_freqs:
             split = splits[word]
+            freq = word_freqs[word]
             if len(split) == 1:
                continue
             i = 0
             while i < len(split) - 1:
                   if split[i] == a and split[i + 1] == b:
-                     split = split[:i] + [a + b] + split[i + 2 :]
+                     #Update pair freqs
+                     newtoken = a+b
+                     if (i>0):
+                        if (pair_freqs[(split[i], a)] <= freq):
+                           del pair_freqs[(split[i], a)]
+                        else:
+                          pair_freqs[(split[i], a)]-= freq
+                        pair_freqs[(split[i], newtoken)]+=freq
+                     if (i+2 < len(split)):
+                        if (pair_freqs[(b, split[i+2])] <= freq):
+                           del pair_freqs[(b, split[i+2])]
+                        else:
+                           pair_freqs[(b, split[i+2])]-= freq
+                        pair_freqs[(newtoken, split[i+2])]+=freq
+                     split = split[:i] + [newtoken] + split[i + 2 :]
                   else:
                      i += 1
             splits[word] = split
@@ -133,8 +148,8 @@ class Tokenizer:
       
       splits = {word: [c for c in word] for word in self.word_freqs.keys()}
       target_vocab_size = get_int_config_value('vocab_size')-1-len(self.punctuation)
+      pair_freqs = compute_pair_freqs(splits, self.word_freqs)
       while (len(self.vocab) < target_vocab_size):
-         pair_freqs = compute_pair_freqs(splits, self.word_freqs)
          #Search best pair
          best_pair = ""
          max_freq = None
@@ -147,7 +162,7 @@ class Tokenizer:
          self.vocab.append(token)
          if (len(self.vocab)%25 == 0):
             log.debug('Vocab size: '+str(len(self.vocab))+', merges size: '+str(len(self.merges)))
-         merge_pair(best_pair[0], best_pair[1], splits, self.word_freqs)
+         merge_pair(best_pair[0], best_pair[1], splits, self.word_freqs, pair_freqs)
    
    def has_vocab(self):
       return isfile(workDir+'vocab.txt') and isfile(workDir+'merges.txt') and isfile(workDir+'alphabet.txt')
