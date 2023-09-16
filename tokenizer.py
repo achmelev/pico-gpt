@@ -1,10 +1,11 @@
 from os.path import isfile, isdir 
-from os import listdir, remove
+from os import listdir, remove, cpu_count
 from environment import log
-from environment import get_config_value, get_int_config_value,workDir
+from environment import get_config_value, get_int_config_value,get_bool_config_value,workDir
 from re import compile, findall
 from collections import defaultdict
 import numpy as np
+from multiprocessing import Queue, Process
 
 
 class Tokenizer:
@@ -304,7 +305,6 @@ class Tokenizer:
 
    
    def tokenizeFile(self, file):
-      log.info('Tokenizing: '+file)
       lines = self.readLinesFromFile(file)
       tokens = []
       percent = 10
@@ -317,45 +317,86 @@ class Tokenizer:
             tokenList = ([self.vocab_map[w] for w in words])+[self.vocab_map['<end/>']]
             tokens.append(tokenList)
       return tokens
- 
-   def tokenize(self, source):
-      assert self.vocab_prepared, 'no vocab'
+   
+   def do_tokenize(self, worker_id, files, listLengths, outFile):
 
-      log.info('Tokenizing...')
-      tmpf = open(workDir+'temp.bin', 'wb')
-      train_dataset_percent = get_int_config_value('train_dataset_percent')
+      if (len(worker_id) == 0):
+         log_worker_prefix = ""
+      else:
+         log_worker_prefix = worker_id+" "
+         log.info(log_worker_prefix+"Running in child tokenizing process, doing "+str(len(files))+" files")
+
+
+      tmpf = open(outFile, 'wb')
       tokensCounter = 0
-      listLengths = []
-      files = self.init_files(source)
-      for file in files:
+      for i, file in enumerate(files):
+         log.info(log_worker_prefix+str(i+1)+"/"+str(len(files))+" "+file)
          tokens = self.tokenizeFile(file)
          for tokenList in tokens:
-            listLengths.append(len(tokenList))
-            tokensCounter = tokensCounter + len(tokenList)
+            listLengths.put(len(tokenList))
+            tokensCounter+=len(tokenList)
             np_tokens = np.array(tokenList, dtype=np.uint16)
             np_tokens.tofile(tmpf)
+      listLengths.put(tokensCounter)
       tmpf.close()
-      log.info('Done. Got '+str(tokensCounter)+' tokens')
+
+   def tokenize(self, source):
+      assert self.vocab_prepared, 'no vocab'
+      
+      files = self.init_files(source)
+
+      workersData = []
+      use_mp = get_bool_config_value("use_multiprocessing")
+
+      if use_mp and cpu_count>1:
+         listLengthsQueue = Queue()
+         worker_id = "1"
+         outFile = workDir+'temp'+worker_id+".bin"
+         workersData.append((worker_id, listLengthsQueue, workDir+'temp'+worker_id+".bin"))
+      else:
+         listLengthsQueue = Queue()
+         worker_id = ""
+         outFile = workDir+'temp'+worker_id+".bin"
+         workersData.append((worker_id, listLengthsQueue, workDir+'temp'+worker_id+".bin"))
+         self.do_tokenize(workersData[0][0], files, workersData[0][1], workersData[0][2])
+
+      numberOfTokens = 0
+      for wd in workersData:
+         listLengthsQueue = wd[1]
+         numberOfTokens+=listLengthsQueue.get()
+      log.info("Got "+str(numberOfTokens)+" Tokens")
 
       log.info("Writing train and validation set...")
-      switchedToValidation = False
-      tmpdata =  np.memmap(workDir+'temp.bin', dtype=np.uint16, mode='r')
-      f = open(workDir+'train.bin', 'wb')
-      numberOfTokens = tokensCounter
       tokensCounter = 0
-      for l in listLengths:
-         array = tmpdata[tokensCounter:tokensCounter+l]
-         tokensCounter+=l
-         if not switchedToValidation:
-            if tokensCounter > numberOfTokens*train_dataset_percent/100:
-               f.close()
-               f = open(workDir+'val.bin', 'wb')
-               switchedToValidation = True
-         array.tofile(f)
+      train_dataset_percent = get_int_config_value('train_dataset_percent')
+      switchedToValidation = False
+      f = open(workDir+'train.bin', 'wb')
+      
+      
+      for wd in workersData:
+         listLengths = []
+         listLengthsQueue = wd[1]
+         while (not listLengthsQueue.empty()):
+            listLengths.insert(0,listLengthsQueue.get())
+
+         tmpdata =  np.memmap(wd[2], dtype=np.uint16, mode='r')
+         
+         for l in listLengths:
+            tokensCounter+=l
+            array = tmpdata[tokensCounter:tokensCounter+l]
+            tokensCounter+=l
+            if not switchedToValidation:
+               if tokensCounter > numberOfTokens*train_dataset_percent/100:
+                  f.close()
+                  f = open(workDir+'val.bin', 'wb')
+                  switchedToValidation = True
+            array.tofile(f)
+         
+         tmpdata._mmap.close()
+         remove(wd[2])
+
+      log.info("Done! Got "+str(tokensCounter)+" tokens")
       f.close()
-      tmpdata._mmap.close()
-      remove(workDir+'temp.bin')
-      log.info("Done")
 
 
       
