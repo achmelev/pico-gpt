@@ -5,7 +5,8 @@ from environment import get_config_value, get_int_config_value,get_bool_config_v
 from re import compile, findall
 from collections import defaultdict
 import numpy as np
-from multiprocessing import Queue, Process
+from multiprocessing import Process, Queue
+
 
 
 class Tokenizer:
@@ -335,6 +336,8 @@ class Tokenizer:
             np_tokens = np.array(tokenList, dtype=np.uint16)
             np_tokens.tofile(tmpf)
       tmpf.close()
+      listLengths.put(None)
+
 
    def tokenize(self, source):
       assert self.vocab_prepared, 'no vocab'
@@ -342,30 +345,44 @@ class Tokenizer:
       files = self.init_files(source)
 
       workersData = []
-      use_mp = get_bool_config_value("use_multiprocessing")
+      use_mp_activated = get_bool_config_value("use_multiprocessing")
       number_of_cores = cpu_count()
+      use_mp = use_mp_activated and number_of_cores >1
 
-      if use_mp and number_of_cores>1:
+      if use_mp:
          log.info("Tokenizing in multiprocessing mode, have "+str(number_of_cores)+" cores.")
-         listLengthsQueue = Queue()
-         worker_id = "1"
-         outFile = workDir+'temp'+worker_id+".bin"
-         workersData.append((worker_id, listLengthsQueue, workDir+'temp'+worker_id+".bin"))
+         group_num = int(len(files)/number_of_cores)
+         for g in range(number_of_cores):
+            firstIndex = group_num*g
+            if (g == number_of_cores-1):
+               lastIndex = len(files)
+            else:
+               lastIndex = group_num*(g+1)
+            listLengthsQueue = Queue()
+            worker_id = str(g+1)
+            outFile = workDir+'temp'+worker_id+".bin"
+            workersData.append((worker_id, listLengthsQueue, workDir+'temp'+worker_id+".bin"))
+            p = Process(target=self.do_tokenize, args=(worker_id, files[firstIndex:lastIndex], listLengthsQueue, outFile))
+            p.start()
       else:
+         log.info("Tokenizing in single core mode, have "+str(number_of_cores)+" cores.")
          listLengthsQueue = Queue()
          worker_id = ""
          outFile = workDir+'temp'+worker_id+".bin"
          workersData.append((worker_id, listLengthsQueue, workDir+'temp'+worker_id+".bin"))
          self.do_tokenize(workersData[0][0], files, workersData[0][1], workersData[0][2])
 
-      numberOfTokens = 0
 
       workersDataOut = []
+      
+      numberOfTokens = 0
       for wd in workersData:
          listLengthsQueue = wd[1]
          listLengths = []
-         while not listLengthsQueue.empty():
+         while True:
             l = listLengthsQueue.get()
+            if (l == None):
+               break
             numberOfTokens+=l
             listLengths.append(l)
          workersDataOut.append((None, listLengths, wd[2]))
@@ -376,6 +393,8 @@ class Tokenizer:
       train_dataset_percent = get_int_config_value('train_dataset_percent')
       switchedToValidation = False
       f = open(workDir+'train.bin', 'wb')
+      allTokensCounter = 0
+      validationCut = numberOfTokens*train_dataset_percent/100
       
       for wd in workersDataOut:
          listLengths = wd[1]
@@ -384,8 +403,9 @@ class Tokenizer:
          for l in listLengths:
             array = tmpdata[tokensCounter:tokensCounter+l]
             tokensCounter+=l
+            allTokensCounter+=l
             if not switchedToValidation:
-               if tokensCounter > numberOfTokens*train_dataset_percent/100:
+               if allTokensCounter > validationCut:
                   f.close()
                   f = open(workDir+'val.bin', 'wb')
                   switchedToValidation = True
@@ -397,13 +417,6 @@ class Tokenizer:
       log.info("Done!")
       f.close()
 
-
-      
-
-
-      if not switchedToValidation: 
-               if tokensCounter > numberOfTokens*train_dataset_percent/100:
-                  switchedToValidation = True
   
 
 
