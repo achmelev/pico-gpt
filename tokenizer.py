@@ -326,18 +326,14 @@ class Tokenizer:
          log_worker_prefix = worker_id+" "
          log.info(log_worker_prefix+"Running in child tokenizing process, doing "+str(len(files))+" files")
 
-
       tmpf = open(outFile, 'wb')
-      tokensCounter = 0
       for i, file in enumerate(files):
          log.info(log_worker_prefix+str(i+1)+"/"+str(len(files))+" "+file)
          tokens = self.tokenizeFile(file)
          for tokenList in tokens:
             listLengths.put(len(tokenList))
-            tokensCounter+=len(tokenList)
             np_tokens = np.array(tokenList, dtype=np.uint16)
             np_tokens.tofile(tmpf)
-      listLengths.put(tokensCounter)
       tmpf.close()
 
    def tokenize(self, source):
@@ -347,8 +343,10 @@ class Tokenizer:
 
       workersData = []
       use_mp = get_bool_config_value("use_multiprocessing")
+      number_of_cores = cpu_count()
 
-      if use_mp and cpu_count>1:
+      if use_mp and number_of_cores>1:
+         log.info("Tokenizing in multiprocessing mode, have "+str(number_of_cores)+" cores.")
          listLengthsQueue = Queue()
          worker_id = "1"
          outFile = workDir+'temp'+worker_id+".bin"
@@ -361,28 +359,29 @@ class Tokenizer:
          self.do_tokenize(workersData[0][0], files, workersData[0][1], workersData[0][2])
 
       numberOfTokens = 0
+
+      workersDataOut = []
       for wd in workersData:
          listLengthsQueue = wd[1]
-         numberOfTokens+=listLengthsQueue.get()
+         listLengths = []
+         while not listLengthsQueue.empty():
+            l = listLengthsQueue.get()
+            numberOfTokens+=l
+            listLengths.append(l)
+         workersDataOut.append((None, listLengths, wd[2]))
+
       log.info("Got "+str(numberOfTokens)+" Tokens")
 
       log.info("Writing train and validation set...")
-      tokensCounter = 0
       train_dataset_percent = get_int_config_value('train_dataset_percent')
       switchedToValidation = False
       f = open(workDir+'train.bin', 'wb')
       
-      
-      for wd in workersData:
-         listLengths = []
-         listLengthsQueue = wd[1]
-         while (not listLengthsQueue.empty()):
-            listLengths.insert(0,listLengthsQueue.get())
-
+      for wd in workersDataOut:
+         listLengths = wd[1]
          tmpdata =  np.memmap(wd[2], dtype=np.uint16, mode='r')
-         
+         tokensCounter = 0
          for l in listLengths:
-            tokensCounter+=l
             array = tmpdata[tokensCounter:tokensCounter+l]
             tokensCounter+=l
             if not switchedToValidation:
@@ -395,7 +394,7 @@ class Tokenizer:
          tmpdata._mmap.close()
          remove(wd[2])
 
-      log.info("Done! Got "+str(tokensCounter)+" tokens")
+      log.info("Done!")
       f.close()
 
 
