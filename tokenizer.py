@@ -118,16 +118,17 @@ class Tokenizer:
          return pair_freqs
       
       def merge_pair(a, b, splits, word_freqs, pair_freqs):
+         del pair_freqs[(a,b)]
          for word in word_freqs:
             split = splits[word]
             freq = word_freqs[word]
+            newtoken = a+b
             if len(split) == 1:
                continue
             i = 0
             while i < len(split) - 1:
                   if split[i] == a and split[i + 1] == b:
                      #Update pair freqs
-                     newtoken = a+b
                      if (i>0):
                         if (pair_freqs[(split[i], a)] <= freq):
                            del pair_freqs[(split[i], a)]
