@@ -7,7 +7,7 @@ import math
 import torch
 from time import time
 from torch.nn import functional as F
-from timers import create_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg
+from timers import create_timer,delete_timer,has_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg
 from os.path import isfile
 from pickle import dump, load
 
@@ -36,6 +36,7 @@ class Trainer:
         #Model
         self.model_file = workDir+"model_dict.bin"
         self.model = GPT()
+        self.model.to(device)
 
         #Resuming from last checkpoint, or partly from pretrained model
         self.resume()
@@ -127,6 +128,9 @@ class Trainer:
         while True:
             start('loop')
             start('train')
+            if (not has_timer('last_train')):
+                create_timer('last_train')
+            start('last_train')
             #Get next batch
             train_batch = self.loader.batch()
             #Set learning rate
@@ -147,6 +151,7 @@ class Trainer:
             iter_counter+=1
             self.state['lr_counter'] = self.state['lr_counter']+1
             stop('train')
+            stop('last_train')
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
@@ -174,7 +179,7 @@ class Trainer:
                 current_val_loss = val_loss/self.eval_iters
                 log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
                 log.info('Has been running since '+get_time_sum_fmt('loop'))
-                log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration")
+                log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration ("+str(get_time_avg('last_train'))+" sec in the last epoch)")
                 log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
@@ -185,14 +190,16 @@ class Trainer:
                     log.info("No improvement to best validation loss "+str(self.state['min_val_loss'])+" since "+str(min_val_loss_counter)+" epochs")
                 log.info("###############################################################################################################")
                 running_loss = 0.0
+                delete_timer('last_train')
+                if (get_time_sum('loop')>self.minutes_to_train*60.0):
+                    log.info("Time is up, stopping training")
+                    break
+                if (min_val_loss_counter >= self.max_epochs_without_improvement):
+                    log.info("Stopping because no improvement since "+str(min_val_loss_counter)+" epochs")
+                    break
             else:
                 stop('loop')
-            if (get_time_sum('loop')>self.minutes_to_train*60.0):
-                log.info("Time is up, stopping training")
-                break
-            if (min_val_loss_counter >= self.max_epochs_without_improvement):
-                log.info("Stopping because no improvement since "+str(min_val_loss_counter)+" epochs")
-                break
+            
         log.info("######################################Validation Report#######################################################")
         log.info("Training done in "+get_time_sum_fmt('loop')+", got best validation loss of "+str(self.state['min_val_loss']))
         log.info("###############################################################################################################")

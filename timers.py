@@ -9,6 +9,13 @@ def create_timer(name):
     m = {"sum": 0.0, "count" : 0, "time": None}
     timers[name] = m
 
+def delete_timer(name):
+    if (name in timers):
+        del timers[name]
+
+def has_timer(name):
+    return name in timers
+
 def start(name):
     global timers
     assert name in timers, "timer "+name+", doesn't exist"
@@ -25,6 +32,9 @@ def stop(name):
     timers[name]["time"] = None
     timers[name]["count"] = 1 + timers[name]["count"]
     timers[name]["sum"] = (ct - st) + timers[name]["sum"]
+
+
+
 
 def fmt_time(seconds):
     global format_string
