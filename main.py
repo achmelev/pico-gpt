@@ -11,6 +11,7 @@ from tokenizer import Tokenizer
 from model import GPT
 from generator import TextGenerator
 from train import Trainer
+from downloader import EnvDownloader
 
 command = argv[2]
 args = None
@@ -61,6 +62,14 @@ def do_train(args):
         minutes_to_train = int(args[0])
         trainer = Trainer(minutes_to_train)
         trainer.run()
+
+def do_download(args):
+    if (args == None):
+        log.error("Wrong number of arguments for command download")
+    else:
+        id = args[0]
+        downloader = EnvDownloader(id)
+        downloader.download()
         
 
 
@@ -76,6 +85,8 @@ elif (command == 'generate'):
     do_generate(args)
 elif (command == 'train'):
     do_train(args)
+elif (command == 'download'):
+    do_download(args)
 
 
 
