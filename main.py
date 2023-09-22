@@ -8,7 +8,7 @@ initEnv(argv[1])
 
 from environment import log
 from tokenizer import Tokenizer
-from model import GPT
+from model import GPT, print_config
 from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
@@ -70,6 +70,13 @@ def do_download(args):
         id = args[0]
         downloader = EnvDownloader(id)
         downloader.download()
+
+def do_config(args):
+    gpt = GPT()
+    log.info("################################################################################")
+    print_config()
+    log.info("The model has "+str(gpt.get_num_params())+" parameters")
+    log.info("################################################################################")
         
 
 
@@ -87,6 +94,8 @@ elif (command == 'train'):
     do_train(args)
 elif (command == 'download'):
     do_download(args)
+elif (command == 'config'):
+    do_config(args)
 
 
 
