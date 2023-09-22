@@ -90,7 +90,7 @@ def initEnv(name: str):
     #Device
     if torch.cuda.is_available():
         log.info("CUDA is available")
-        if config.getboolean('use_cuda'):
+        if config.getboolean(environmentName, 'use_cuda'):
             device = 'cuda'
         else:
             device = 'cpu'
