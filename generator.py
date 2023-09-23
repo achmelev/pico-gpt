@@ -25,7 +25,7 @@ class TextGenerator:
         self.model_file = workDir+"model_dict.bin"
         if (isfile(self.model_file)):
             log.info("Loading model from "+self.model_file)
-            self.model.load_state_dict(torch.load(self.model_file))
+            self.model.load_state_dict(torch.load(self.model_file, map_location = torch.device(device)))
         self.model.eval()
         
         #Context
