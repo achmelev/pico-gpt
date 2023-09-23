@@ -90,12 +90,11 @@ class TextGenerator:
                     if len(current_word) >0:
                         print(current_word, end="")#Aktuelles Wort
                     line_length = line_length + len(current_word)
-                    current_word = token[1:]
                 else:
                     if len(current_word)>0:
                         print(' '+current_word, end = "")#Aktuelles Wort
                     line_length = line_length + len(current_word)+1
-                    current_word = token[1:]
+                current_word = token[1:]
                 words_counter = words_counter +1
                 if (line_length > self.max_line_length):
                     print("")#Zeilenumbruch
