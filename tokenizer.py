@@ -347,7 +347,7 @@ class Tokenizer:
       workersData = []
       use_mp_activated = get_bool_config_value("use_multiprocessing")
       number_of_cores = cpu_count()
-      use_mp = use_mp_activated and number_of_cores >1
+      use_mp = use_mp_activated and number_of_cores >1 and len(files)>1 
 
       if use_mp:
          log.info("Tokenizing in multiprocessing mode, have "+str(number_of_cores)+" cores.")
