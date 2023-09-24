@@ -38,9 +38,6 @@ class Trainer:
         self.model = GPT()
         self.model.to(device)
 
-        #Resuming from last checkpoint, or partly from pretrained model
-        self.resume()
-
         #Data Loader
         self.loader = DataLoader()
 
@@ -64,6 +61,9 @@ class Trainer:
             log.info('Using fused version of the AdamW optimizer')
         extra_args = dict(fused=True) if use_fused else dict()
         self.optimizer = torch.optim.AdamW(optim_groups, lr=self.learning_rate, betas=self.betas, **extra_args)
+
+        #Resuming from last checkpoint, or partly from pretrained model
+        self.resume()
     
     # learning rate decay scheduler (cosine with warmup)
     def get_lr(self, it):
@@ -93,15 +93,46 @@ class Trainer:
     def resume(self):
          if (isfile(self.model_file)):
             log.info("Loading model from "+self.model_file)
-            self.model.load_state_dict(torch.load(self.model_file))
+            self.model.load_state_dict(torch.load(self.model_file, map_location = torch.device(device)))
          if (isfile(self.state_file)):
              log.info("Loading state from "+self.state_file)
              f = open (self.state_file,"rb")
              self.state = load(f)
              f.close()
              self.resuming = True
+         else:
+             log.info("Doing initial validation...")
+             _, val_loss = self.validate()
+             self.state['min_val_loss'] = val_loss/self.eval_iters
+         log.info("Initial validation loss: "+str(self.state['min_val_loss']))
+    
+    def validate(self):
+        train_loss = 0.0
+        val_loss = 0.0
+        for it in range(self.eval_iters):
+            if (has_timer('validate')):
+                start('validate')
+            self.model.eval()
+            train_batch = self.loader.batch()
+            logits = self.model(train_batch[0])
+            loss = self.calculate_loss(logits, train_batch[1])
+            train_loss+=loss.item()
+            val_batch = self.loader.batch(train=False)
+            logits = self.model(val_batch[0])
+            loss = self.calculate_loss(logits, val_batch[1])
+            val_loss+=loss.item()
+            self.model.train()
+            if (has_timer('validate')):
+                stop('validate')
+        return train_loss, val_loss
+
 
     def run(self):
+        #Stopping if to train <=0
+        if (self.minutes_to_train <=0):
+            log.info("Stopping immediately")
+            return
+        
         #Training loop
         epochCounter = 0
         start_time = time()
@@ -158,22 +189,7 @@ class Trainer:
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
-                validation_loss = 0.0
-                train_loss = 0.0
-                val_loss = 0.0
-                for it in range(self.eval_iters):
-                    start('validate')
-                    self.model.eval()
-                    train_batch = self.loader.batch()
-                    logits = self.model(train_batch[0])
-                    loss = self.calculate_loss(logits, train_batch[1])
-                    train_loss+=loss.item()
-                    val_batch = self.loader.batch(train=False)
-                    logits = self.model(val_batch[0])
-                    loss = self.calculate_loss(logits, val_batch[1])
-                    val_loss+=loss.item()
-                    self.model.train()
-                    stop('validate')
+                train_loss, val_loss = self.validate()
                 stop('loop')
                 log.info("######################################Epoch Report#######################################################")
                 current_val_loss = val_loss/self.eval_iters
