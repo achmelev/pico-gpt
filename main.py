@@ -38,7 +38,7 @@ def do_generate(args):
         prompt = ""
     else:
         prompt = args[0]
-    generator = TextGenerator(prompt)
+    generator = TextGenerator(prompt = prompt)
     generator.generate_console()
        
 
