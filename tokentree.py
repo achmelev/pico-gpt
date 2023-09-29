@@ -1,3 +1,6 @@
+from os.path import isfile, getsize
+from mmap import mmap, PROT_WRITE, PROT_READ
+
 
 class TokenTreeNode:
     
@@ -51,3 +54,46 @@ class TokenTreeNode:
         fget=get_child,
         fset=set_child
     )
+
+class TokenTree:
+
+    def __init__(self, file, mode):
+        assert mode=='w' or mode=='r','Illegal mode '+mode
+        if (mode == 'r'):
+            assert isfile(file),'File '+str(file)+'does not exist!'
+        self.file = file
+        self.mode = mode
+
+        if (isfile(self.file)):
+            assert getsize(self.file) >0 and getsize(self.file)%4096 == 0,'Wrong file size: '+str(getsize(self.file))
+            self.pageSize = getsize(self.file)/4096
+            if (self.mode == 'r'):
+                self.f = open(self.file,'rb')
+                self.mm = mmap(self.f.fileno(), 0, prot=PROT_READ)
+            else:
+                self.f = open(self.file,'r+b')
+                self.mm = mmap(self.f.fileno(), 0, prot=PROT_WRITE)
+            
+        else:
+            self.pageSize = 1
+            self.f = open(self.file,'wb')
+            self.f.write(bytearray(4096))
+            self.f.close()
+            self.f = open(self.file,'r+b')
+            self.mm = mmap(self.f.fileno(), 4096, prot=PROT_WRITE)
+
+    def appendPage(self):
+        assert self.mode == 'w','Read-Only tree'
+        self.pageSize+=1
+        self.mm.resize(self.pageSize*4096)
+
+    def close(self):
+        self.mm.flush()
+        self.mm.close()
+        self.f.close()
+
+
+        
+
+
+

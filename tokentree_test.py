@@ -1,6 +1,7 @@
 import unittest
 
-from tokentree import TokenTreeNode
+from tokentree import TokenTreeNode, TokenTree
+from os import remove
 
 class TokenTreeTest(unittest.TestCase):
 
@@ -31,6 +32,17 @@ class TokenTreeTest(unittest.TestCase):
         self.assertEqual(100005, node.count)
         self.assertEqual(1230006000, node.sibling)
         self.assertEqual(267004006, node.child)
+    
+    def test_tree_1(self):
+        tree = TokenTree('testtree.bin', 'w')
+        self.assertEqual(1, tree.pageSize)
+        tree.appendPage()
+        self.assertEqual(2, tree.pageSize)
+        tree.close()
+        tree = TokenTree('testtree.bin', 'r')
+        self.assertEqual(2, tree.pageSize)
+        tree.close()
+        remove('testtree.bin')
         
 
 
