@@ -2,8 +2,13 @@ import unittest
 
 from tokentree import TokenTreeNode, TokenTree
 from os import remove
+from os.path import isfile
 
 class TokenTreeTest(unittest.TestCase):
+
+    def setUp(self) -> None:
+        if isfile('testtree.bin'):
+            remove('testtree.bin')
 
     def test_node(self):
         node = TokenTreeNode()
@@ -34,31 +39,30 @@ class TokenTreeTest(unittest.TestCase):
         self.assertEqual(267004006, node.child)
     
     def test_tree_1(self):
-        tree = TokenTree('testtree1.bin', 'w')
+        tree = TokenTree('testtree.bin', 'w')
         self.assertEqual(1, tree.pageSize)
         tree.appendPage()
         self.assertEqual(2, tree.pageSize)
         tree.close()
-        tree = TokenTree('testtree1.bin', 'r')
+        tree = TokenTree('testtree.bin', 'r')
         self.assertEqual(2, tree.pageSize)
         tree.close()
-        remove('testtree1.bin')
     
     def test_tree_2(self):
-        tree = TokenTree('testtree2.bin', 'w')
+        tree = TokenTree('testtree.bin', 'w')
         for token in range(400):
             node = TokenTreeNode()
             node.token = token
             tree.appendNode(node)
         tree.close()
-        tree = TokenTree('testtree2.bin', 'w')
+        tree = TokenTree('testtree.bin', 'w')
         for token in range(400):
             node = tree.readNode(token)
             node.count = token
             tree.writeNode(token, node)
         tree.close()
 
-        tree = TokenTree('testtree2.bin', 'w')
+        tree = TokenTree('testtree.bin', 'w')
         self.assertEqual(400, tree.size)
         for token in range(400):
             node = tree.readNode(token)
@@ -66,7 +70,18 @@ class TokenTreeTest(unittest.TestCase):
             self.assertEqual(token, node.count)
 
         tree.close()
-        remove('testtree2.bin')
+        remove('testtree.bin')
+
+    def test_tree_3(self):
+        tree = TokenTree('testtree.bin', 'w')
+        tree.initFirstLevel(50)
+        tree.close()
+        tree = TokenTree('testtree.bin', 'r')
+        for token in range(50):
+            node = tree.getNode([token])
+            self.assertTrue(node != None)
+        tree.close()
+        remove('testtree.bin')
 
         
         
