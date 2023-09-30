@@ -5,6 +5,7 @@ from mmap import mmap, PROT_WRITE, PROT_READ
 class TokenTreeNode:
     
     def  __init__(self, content:bytearray = None):
+        self.index = None
         if (content == None):
             self.content = bytearray(13)
         else:
@@ -63,6 +64,7 @@ class TokenTree:
             assert isfile(file),'File '+str(file)+'does not exist!'
         self.file = file
         self.mode = mode
+        self.vocab_size = 0
 
         if (isfile(self.file)):
             assert getsize(self.file) >0 and getsize(self.file)%4096 == 0,'Wrong file size: '+str(getsize(self.file))
@@ -74,7 +76,7 @@ class TokenTree:
                 self.f = open(self.file,'r+b')
                 self.mm = mmap(self.f.fileno(), 0, prot=PROT_WRITE)
             self.readHeader()
-            assert (6+13*self.size) <=self.pageSize*4096,"Too small disk size: "+str(self.pageSize*4096)
+            assert (8+13*self.size) <=self.pageSize*4096,"Too small disk size: "+str(self.pageSize*4096)
             
         else:
             self.pageSize = 1
@@ -89,53 +91,61 @@ class TokenTree:
     def readHeader(self):
         self.size = int.from_bytes(self.mm[:4],'big')
         self.depth = int.from_bytes(self.mm[4:6],'big')
+        self.vocab_size = int.from_bytes(self.mm[6:8],'big')
 
     def writeHeader(self):
         assert self.mode=='w',"Read only"
         self.mm[:4] = self.size.to_bytes(4,'big')
         self.mm[4:6] = self.depth.to_bytes(2, 'big')
+        self.mm[6:8] = self.vocab_size.to_bytes(2, 'big')
     
     def appendNode(self, node):
         assert self.mode=='w',"Read only"
-        offset = 6+13*self.size
+        offset = 8+13*self.size
         if (offset+13 > self.pageSize*4096):
             self.appendPage()
         self.mm[offset:offset+13] = node.content
         self.size+=1
     
     def readNode(self, index):
-        assert 6+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
-        result =  TokenTreeNode(bytearray(self.mm[6+13*index:6+13*(index+1)]))
+        assert 8+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
+        result =  TokenTreeNode(bytearray(self.mm[8+13*index:8+13*(index+1)]))
+        result.index = index
         return result
     
     def getLevel1Node(self, token):
         return self.readNode(token)
     
-    def writeNode(self, index, node):
+    def writeNode(self, node):
+        assert node.index != None, 'Index not set'
+        index = node.index
         assert self.mode=='w',"Read only"
         assert self.size>index,'Index out of bounds: '+str(index)+":"+str(self.size)
-        assert 6+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
-        self.mm[6+13*index:6+13*(index+1)] = node.content
+        assert 8+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
+
+        self.mm[8+13*index:8+13*(index+1)] = node.content
     
     def searchTokenNode(self, parentNode, token):
         if (parentNode.child == 0):
-            return None
+            return None, None
         else:
             currentNode = self.readNode(parentNode.child)
             while (currentNode.token != token and currentNode.sibling != 0):
                 currentNode = self.readNode(currentNode.sibling)
             if (currentNode.token == token):
-                return currentNode
+                return currentNode, None
             else:
-                return None
+                return None, currentNode
 
     def verifyTokenPath(self, tokenPath):
+        assert len(tokenPath) > 0, "Empty token path"
         for token in tokenPath:
             assert token < self.vocab_size
 
     def initFirstLevel(self, vocab_size):
         assert self.mode=='w',"Read only"
         assert self.size == 0,"Not empty tree"
+        self.vocab_size = vocab_size
         for token in range(vocab_size):
             node = TokenTreeNode() 
             node.token = token
@@ -144,11 +154,64 @@ class TokenTree:
             node.count  = 0
             self.appendNode(node)
         self.depth = 1
+    
+    def createNewNode(self, token):
+        node = TokenTreeNode()
+        node.token = token
+        node.count = 1
+        node.child = 0
+        node.sibling = 0
+        return node
+    
+    def createFirstChild(self, parentNode, token):
+        assert parentNode.child == 0,'something wrong, child index is already set'
+        newNode = self.createNewNode(token)
+        self.appendNode(newNode)
+        parentNode.child = self.size-1
+        self.writeNode(parentNode)
+
+    def appendSibling(self, lastSiblingNode, token):
+        assert lastSiblingNode.sibling == 0,'something wrong, child index is already set'
+        newNode = self.createNewNode(token)
+        self.appendNode(newNode)
+        lastSiblingNode.sibling = self.size-1
+        self.writeNode(lastSiblingNode)    
+
+    
+    def insertOrUpdateToken(self, tokenPath):
+        assert self.depth >=1,"Empty tree"
+        self.verifyTokenPath(tokenPath)
+        assert len(tokenPath) <= self.depth+1, 'Token path too long, add prefixes first!'
+
+        if len(tokenPath) == 1:
+            node = self.getNode(tokenPath)
+            node.count+=1
+            self.writeNode(node)
+        else:
+            parentNode = self.getNode(tokenPath[:-1])
+            assert parentNode != None, 'parent node missing, add prefixes first!'
+            if (self.depth+1 == len(tokenPath)):
+                self.createFirstChild(parentNode, tokenPath[-1:][0])
+                self.depth+=1
+            else:
+                if (parentNode.child == 0):
+                    self.createFirstChild(parentNode, tokenPath[-1:][0])
+                else:
+                    node, last_sibling = self.searchTokenNode(parentNode,tokenPath[-1:][0])
+                    if (node != None):
+                        node.count+=1
+                        self.writeNode(node)
+                    else:
+                        assert last_sibling.sibling == 0,'sibling index set, something wrong'
+                        self.appendSibling(last_sibling, tokenPath[-1:][0])
+
 
     def getNode(self, tokenPath):
         assert self.depth >=1,"Empty tree"
+        self.verifyTokenPath(tokenPath)
         assert len(tokenPath) <= self.depth, 'Token path too long'
         for index, token in enumerate(tokenPath):
+            assert token < self.vocab_size, 'token out of bounds!'
             if (index == 0):
                 currentNode = self.getLevel1Node(token)
                 if (len(tokenPath) == 1):
@@ -156,11 +219,11 @@ class TokenTree:
                 if (currentNode == None):
                     return None
             elif (index > 0 and index < len(tokenPath)-1):
-                currentNode = self.searchTokenNode(currentNode, token)
+                currentNode, _ = self.searchTokenNode(currentNode, token)
                 if (currentNode == None):
                     return None
             else:
-                currentNode = self.searchTokenNode(currentNode, token)
+                currentNode, _ = self.searchTokenNode(currentNode, token)
                 return currentNode
 
     def appendPage(self):
