@@ -155,6 +155,7 @@ class TokenTreeTest(unittest.TestCase):
                 tree.insertOrUpdateToken(sequence)
             tree.close()
             tree = TokenTree('testtree.bin', 'r')
+            self.assertEqual(5, tree.depth)
             
             count = self.countRandomEntries(self.frequencies)
             for token in range(10):
@@ -191,11 +192,13 @@ class TokenTreeTest(unittest.TestCase):
             tree.close()
             self.createRandomTestData(7,70, startDepth=6, stopDepth=7)
             tree = TokenTree('testtree.bin', 'w')
+            self.assertEqual(5, tree.depth)
             for sequence in self.sequences:
                 if (len(sequence)>=6):
                     tree.insertOrUpdateToken(sequence)
             tree.close()
             tree = TokenTree('testtree.bin', 'r')
+            self.assertEqual(7, tree.depth)
             count = self.countRandomEntries(self.frequencies)
             for token in range(10):
                 if token not in self.frequencies.keys():
