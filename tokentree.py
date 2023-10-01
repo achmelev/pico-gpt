@@ -225,6 +225,24 @@ class TokenTree:
             else:
                 currentNode, _ = self.searchTokenNode(currentNode, token)
                 return currentNode
+    
+
+    def getNodesChildren(self, tokenPath):
+        result = {}
+        if (len(tokenPath) == 0):
+            for token in range(self.vocab_size):
+                result[token] = self.getLevel1Node(token)
+        else:
+            parentNode = self.getNode(tokenPath)
+            if (parentNode.child == 0):
+                return result
+            else:
+                currentNode = self.readNode(parentNode.child)
+                result[currentNode.token] = currentNode
+                while (currentNode.sibling != 0):
+                    currentNode = self.readNode(currentNode.sibling)
+                    result[currentNode.token] = currentNode
+        return result
 
     def appendPage(self):
         assert self.mode == 'w','Read-Only tree'

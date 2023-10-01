@@ -112,7 +112,7 @@ class TokenTreeTest(unittest.TestCase):
                 currentDict = result[1]
             else:
                 raise Exception('Couldnt find', sequence[:idx+1])
-        return result[0]
+        return result[0], result[1]
 
     def updateRandomFrequences(self, frequencies, sequence):
         currentDict = frequencies
@@ -158,10 +158,19 @@ class TokenTreeTest(unittest.TestCase):
                     count+=1
             self.assertEqual(count, tree.size)
             for sequence in sequences:
+
+                frequency, children = self.getRandomFrequency(frequencies, sequence)
                 node = tree.getNode(sequence)
                 self.assertTrue(node != None)
                 self.assertEqual(sequence[-1:][0], node.token)
-                self.assertEqual(self.getRandomFrequency(frequencies, sequence), node.count)
+                self.assertEqual(frequency, node.count)
+                childrenNodes = tree.getNodesChildren(sequence)
+                self.assertTrue(childrenNodes != None)
+                self.assertEqual(len(children), len(childrenNodes))
+                for token in children.keys():
+                    frequency1 = children[token][0]
+                    frequency2 = childrenNodes[token].count
+                    self.assertEqual(frequency1, frequency2)
             tree.close()
             remove('testtree.bin')
         
