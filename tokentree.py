@@ -108,7 +108,7 @@ class TokenTree:
         self.size+=1
     
     def readNode(self, index):
-        assert 8+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
+        assert 8+13*(index+1) <= self.pageSize*4096,'Out of bounds '+str(8+13*(index+1))+":"+str(self.pageSize*4096)
         result =  TokenTreeNode(bytearray(self.mm[8+13*index:8+13*(index+1)]))
         result.index = index
         return result

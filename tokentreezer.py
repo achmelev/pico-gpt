@@ -36,6 +36,8 @@ class TokenTreezer:
                 subsequence = sequence[0:idx2+1]
                 if (len(subsequence) >= startDepth):
                     tree.insertOrUpdateToken(self.int_list_from_numpy(subsequence))
+                    if (tree.size%1000 == 0):
+                        log.debug('Got '+str(tree.size)+", nodes, current index in train data is = "+str(idx))
         
-        log.info('Done. Got a tree with size = '+str(tree.size)+', depth = '+str(tree.depth))
+        log.info('Done. Got a tree with size = '+str(tree.size))
         tree.close()

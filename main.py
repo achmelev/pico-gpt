@@ -12,6 +12,7 @@ from model import GPT, print_config
 from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
+from tokentreezer import TokenTreezer
 
 command = argv[2]
 args = None
@@ -77,6 +78,14 @@ def do_config(args):
     print_config()
     log.info("The model has "+str(gpt.get_num_params())+" parameters")
     log.info("################################################################################")
+
+def do_token_tree(args):
+    if (args == None):
+        log.error("Wrong number of arguments for command download")
+    else:
+        depth = int(args[0])
+        treezer = TokenTreezer()
+        treezer.write(depth)
         
 
 
@@ -96,6 +105,8 @@ elif (command == 'download'):
     do_download(args)
 elif (command == 'config'):
     do_config(args)
+elif (command == 'tokentree'):
+    do_token_tree(args)
 
 
 
