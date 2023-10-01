@@ -25,7 +25,7 @@ class RandomTokenTree:
 
     def getRandomFrequency(self, sequence):
         currentDict = self.frequencies
-        result = None
+        result = [0,currentDict]
         for idx, token in enumerate(sequence):
             if token in  currentDict.keys():
                 result = currentDict[token]
@@ -33,6 +33,7 @@ class RandomTokenTree:
             else:
                 raise Exception('Couldnt find', sequence[:idx+1])
         return result[0], result[1]
+    
     
     def updateRandomFrequences(self,  sequence):
         currentDict = self.frequencies
