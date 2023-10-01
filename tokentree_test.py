@@ -5,6 +5,68 @@ from os import remove
 from os.path import isfile
 from random import randint
 
+class RandomTokenTree:
+
+    def __init__(self):
+        self.tokens = []
+        self.frequencies = {}
+        self.sequences = []
+    
+    def countRandomEntries(self):
+        return self.doCountRandomEntries(self.frequencies)
+
+    def doCountRandomEntries(self, dict):
+        currentDict = dict
+        result = 0
+        for key in currentDict.keys():
+            result+=1
+            result+=self.doCountRandomEntries(currentDict[key][1])
+        return result
+
+    def getRandomFrequency(self, sequence):
+        currentDict = self.frequencies
+        result = None
+        for idx, token in enumerate(sequence):
+            if token in  currentDict.keys():
+                result = currentDict[token]
+                currentDict = result[1]
+            else:
+                raise Exception('Couldnt find', sequence[:idx+1])
+        return result[0], result[1]
+    
+    def updateRandomFrequences(self,  sequence):
+        currentDict = self.frequencies
+        for idx, token in enumerate(sequence):
+            if (token not in currentDict.keys()):
+                assert idx == len(sequence)-1,'intermediate token not found!'
+                currentDict[token] = [0,{}]
+            if (idx == len(sequence)-1):#Update only last token
+                currentDict[token][0]+=1
+            currentDict = currentDict[token][1]
+    
+    def createRandomTestData(self, ml, maxTokenListLength, startDepth = 1, stopDepth = 0, vocab_size = 10):
+        if (len(self.tokens) == 0):
+            for i in range(maxTokenListLength):
+                self.tokens.append(randint(0,vocab_size-1))
+        maxlength = ml
+        if stopDepth == 0:
+            stopDepth = ml
+        for idx, _ in enumerate(self.tokens):
+            maxl = min(maxlength, len(self.tokens)-idx)
+            sequence = self.tokens[idx:idx+maxl]
+            for idx2, _ in enumerate(sequence):
+                subsequence = sequence[0:idx2+1]
+                if (len(subsequence) >= startDepth and len(subsequence) <= stopDepth):
+                    self.updateRandomFrequences(subsequence)
+                    self.sequences.append(subsequence)
+    
+    def countTokensNotInFirstLevel(self, vocab_size = 10):
+        count = 0
+        for token in range(vocab_size):
+            if token not in self.frequencies.keys():
+                count+=1
+        return count
+
 class TokenTreeTest(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -93,76 +155,24 @@ class TokenTreeTest(unittest.TestCase):
         tree.close()
         remove('testtree.bin')
     
-
-    def countRandomEntries(self, frequencies):
-        currentDict = frequencies
-        result = 0
-        for key in currentDict.keys():
-            result+=1
-            result+=self.countRandomEntries(currentDict[key][1])
-        
-        return result
-
-    def getRandomFrequency(self, frequencies, sequence):
-        currentDict = frequencies
-        result = None
-        for idx, token in enumerate(sequence):
-            if token in  currentDict.keys():
-                result = currentDict[token]
-                currentDict = result[1]
-            else:
-                raise Exception('Couldnt find', sequence[:idx+1])
-        return result[0], result[1]
-
-    def updateRandomFrequences(self, frequencies, sequence):
-        currentDict = frequencies
-        for idx, token in enumerate(sequence):
-            if (token not in currentDict.keys()):
-                assert idx == len(sequence)-1,'intermediate token not found!'
-                currentDict[token] = [0,{}]
-            if (idx == len(sequence)-1):#Update only last token
-                currentDict[token][0]+=1
-            currentDict = currentDict[token][1]
-
-    def createRandomTestData(self, ml, maxTokenListLength, startDepth = 1, stopDepth = 0):
-        if (len(self.tokens) == 0):
-            number = randint(ml, maxTokenListLength)
-            for i in range(number):
-                self.tokens.append(randint(0,9))
-        maxlength = ml
-        if stopDepth == 0:
-            stopDepth = ml
-        for idx, _ in enumerate(self.tokens):
-            maxl = min(maxlength, len(self.tokens)-idx)
-            sequence = self.tokens[idx:idx+maxl]
-            for idx2, _ in enumerate(sequence):
-                subsequence = sequence[0:idx2+1]
-                if (len(subsequence) >= startDepth and len(subsequence) <= stopDepth):
-                    self.updateRandomFrequences(self.frequencies, subsequence)
-                    self.sequences.append(subsequence)
-        
+    
     def test_tree_4(self):
         for _ in range(50):
-            self.tokens = []
-            self.frequencies = {}
-            self.sequences = []
-            self.createRandomTestData(5,50)
+            rtree = RandomTokenTree()
+            rtree.createRandomTestData(5,50)
             tree = TokenTree('testtree.bin', 'w')
             tree.initFirstLevel(10)
-            for sequence in self.sequences:
+            for sequence in rtree.sequences:
                 tree.insertOrUpdateToken(sequence)
             tree.close()
             tree = TokenTree('testtree.bin', 'r')
             self.assertEqual(5, tree.depth)
             
-            count = self.countRandomEntries(self.frequencies)
-            for token in range(10):
-                if token not in self.frequencies.keys():
-                    count+=1
+            count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel()
             self.assertEqual(count, tree.size)
-            for sequence in self.sequences:
+            for sequence in rtree.sequences:
 
-                frequency, children = self.getRandomFrequency(self.frequencies, sequence)
+                frequency, children = rtree.getRandomFrequency(sequence)
                 node = tree.getNode(sequence)
                 self.assertTrue(node != None)
                 self.assertEqual(sequence[-1:][0], node.token)
@@ -179,32 +189,27 @@ class TokenTreeTest(unittest.TestCase):
     
     def test_tree_5(self):
         for _ in range(25):
-            self.tokens = []
-            self.frequencies = {}
-            self.sequences = []
-            self.createRandomTestData(7,70, startDepth=1, stopDepth=5)
+            rtree = RandomTokenTree()
+            rtree.createRandomTestData(7,70, startDepth=1, stopDepth=5)
             tree = TokenTree('testtree.bin', 'w')
             tree.initFirstLevel(10)
-            for sequence in self.sequences:
+            for sequence in rtree.sequences:
                 tree.insertOrUpdateToken(sequence)
             tree.close()
-            self.createRandomTestData(7,70, startDepth=6, stopDepth=7)
+            rtree.createRandomTestData(7,70, startDepth=6, stopDepth=7)
             tree = TokenTree('testtree.bin', 'w')
             self.assertEqual(5, tree.depth)
-            for sequence in self.sequences:
+            for sequence in rtree.sequences:
                 if (len(sequence)>=6):
                     tree.insertOrUpdateToken(sequence)
             tree.close()
             tree = TokenTree('testtree.bin', 'r')
             self.assertEqual(7, tree.depth)
-            count = self.countRandomEntries(self.frequencies)
-            for token in range(10):
-                if token not in self.frequencies.keys():
-                    count+=1
+            count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel()
             self.assertEqual(count, tree.size)
-            for sequence in self.sequences:
+            for sequence in rtree.sequences:
 
-                frequency, children = self.getRandomFrequency(self.frequencies, sequence)
+                frequency, children = rtree.getRandomFrequency(sequence)
                 node = tree.getNode(sequence)
                 self.assertTrue(node != None)
                 self.assertEqual(sequence[-1:][0], node.token)
