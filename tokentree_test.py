@@ -132,22 +132,20 @@ class TokenTreeTest(unittest.TestCase):
         maxlength = ml
         if stopDepth == 0:
             stopDepth = ml
-        self.frequences = self.frequencies
-        self.sequences = self.sequencies
         for idx, _ in enumerate(self.tokens):
             maxl = min(maxlength, len(self.tokens)-idx)
             sequence = self.tokens[idx:idx+maxl]
             for idx2, _ in enumerate(sequence):
                 subsequence = sequence[0:idx2+1]
                 if (len(subsequence) >= startDepth and len(subsequence) <= stopDepth):
-                    self.updateRandomFrequences(self.frequences, subsequence)
+                    self.updateRandomFrequences(self.frequencies, subsequence)
                     self.sequences.append(subsequence)
         
     def test_tree_4(self):
         for _ in range(50):
             self.tokens = []
             self.frequencies = {}
-            self.sequencies = []
+            self.sequences = []
             self.createRandomTestData(5,50)
             tree = TokenTree('testtree.bin', 'w')
             tree.initFirstLevel(10)
@@ -183,7 +181,7 @@ class TokenTreeTest(unittest.TestCase):
         for _ in range(25):
             self.tokens = []
             self.frequencies = {}
-            self.sequencies = []
+            self.sequences = []
             self.createRandomTestData(7,70, startDepth=1, stopDepth=5)
             tree = TokenTree('testtree.bin', 'w')
             tree.initFirstLevel(10)
