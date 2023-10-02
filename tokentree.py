@@ -143,7 +143,7 @@ class TokenTreeCache:
 
 class TokenTree:
 
-    def __init__(self, file, mode, cacheMaxSize = None):
+    def __init__(self, file, mode, cacheMaxSize = 0):
         assert mode=='w' or mode=='r','Illegal mode '+mode
         if (mode == 'r'):
             assert isfile(file),'File '+str(file)+'does not exist!'
@@ -173,7 +173,7 @@ class TokenTree:
             self.size = 0
             self.depth = 0
         
-        if (cacheMaxSize != None):
+        if (cacheMaxSize >0):
             self.cache = TokenTreeCache(cacheMaxSize)
         else:
             self.cache = None
