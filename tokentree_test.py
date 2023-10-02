@@ -1,6 +1,6 @@
 import unittest
 
-from tokentree import TokenTreeNode, TokenTree
+from tokentree import TokenTreeNode, TokenTree, TokenTreeCache
 from os import remove
 from os.path import isfile
 from random import randint
@@ -101,6 +101,58 @@ class TokenTreeTest(unittest.TestCase):
         self.assertEqual(100005, node.count)
         self.assertEqual(1230006000, node.sibling)
         self.assertEqual(267004006, node.child)
+    
+    def verifyCache(self, cache, index = None):
+        if (index != None):
+            if (index < 10):#Cache noch nicht aufgefüllt
+                self.assertEqual(index+1, cache.size)
+            else:
+                self.assertEqual(10, cache.size)
+        else:
+            self.assertEqual(10, cache.size)
+        
+        self.assertEqual(cache.size, len(cache.table))
+
+        if (index !=None):
+            for i in range(max(0, index+1-cache.size),cache.size):
+                node = cache.table[i]
+                self.assertEqual(i, node.index)
+                self.assertTrue(node.inCache)
+        
+        count = 1
+        self.assertEqual(None, cache.queueFirst.cacheQueuePrevious)
+        currentNode = cache.queueFirst
+        while(currentNode != None):
+            self.assertEqual(currentNode, cache.table[currentNode.index])
+            if (index != None):
+                self.assertEqual(currentNode.index, max(0, index+1-cache.size)+count-1)
+            if (currentNode.cacheQueueNext != None):
+                self.assertEqual(currentNode.cacheQueueNext.cacheQueuePrevious, currentNode)
+                currentNode = currentNode.cacheQueueNext
+                count+=1
+            else:
+                self.assertEqual(currentNode, cache.queueLast)
+                currentNode = None
+        self.assertEqual(count, len(cache.table))
+
+        
+
+
+
+    def test_cache(self):
+        cache = TokenTreeCache(10)
+        for index in range(15):
+             node = TokenTreeNode()
+             node.index = index
+             cache.append(node)
+             self.verifyCache(cache, index)
+        
+        node = cache.lookup(0)
+        self.assertEqual(None, node)
+        node = cache.lookup(7)
+        self.assertEqual(node.index, 7)
+        self.assertEqual(node, cache.queueLast)
+        self.verifyCache(cache)
     
     def test_tree_1(self):
         tree = TokenTree('testtree.bin', 'w')

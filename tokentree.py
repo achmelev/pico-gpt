@@ -6,6 +6,9 @@ class TokenTreeNode:
     
     def  __init__(self, content:bytearray = None):
         self.index = None
+        self.inCache = False
+        self.cacheQueueNext = None
+        self.cacheQueuePrevious = None
         if (content == None):
             self.content = bytearray(13)
         else:
@@ -56,6 +59,97 @@ class TokenTreeNode:
         fset=set_child
     )
 
+class TokenTreeCache:
+    
+    def __init__(self, maxSize):
+        self.table = {}
+        self.queueFirst  = None
+        self.queueLast = None
+        self.size = 0
+        self.maxSize = maxSize
+    
+    def removeFromQueue(self, node):
+        assert node.inCache, 'Node not in cache'
+        assert node.cacheQueueNext != None or node.cacheQueuePrevious != None,'Orphan node (or only one element in queue)'
+        if (node == self.queueFirst): #first element
+            self.queueFirst = node.cacheQueueNext
+            self.queueFirst.cacheQueuePrevious = None
+        elif (node == self.queueLast): #last element
+            self.queueLast = node.cacheQueuePrevious
+            self.queueLast.cacheQueueNext = None
+        else:
+            node.cacheQueuePrevious.cacheQueueNext = node.cacheQueueNext
+            node.cacheQueueNext.cacheQueuePrevious = node.cacheQueuePrevious
+        
+        return node
+    
+    def appendToQueue(self, node):
+        assert node.inCache, 'Node not in cache'
+        if (self.queueFirst == None):#leer
+            self.queueFirst = node
+            self.queueLast = node
+            node.cacheQueuePrevious = None
+            node.cacheQueueNext = None
+        else:
+            self.queueLast.cacheQueueNext = node
+            node.cacheQueuePrevious = self.queueLast
+            node.cacheQueueNext = None
+            self.queueLast = node
+
+        return node
+    
+    def remove(self, node):
+        assert node.inCache, 'Node not in cache'
+        assert node.index in self.table.keys(),'Node not in table'
+        del self.table[node.index]
+        self.removeFromQueue(node)
+        self.inCache = False
+        self.cacheQueueNext = None
+        self.cacheQueuePrevious = None
+        self.size-=1
+    
+    def append(self, node):
+        assert not node.inCache, 'Node already in cache'
+        assert node.index not in self.table.keys(),'Node already in table'
+        self.table[node.index] = node
+        node.inCache = True
+        self.appendToQueue(node)
+        self.size+=1
+        if (self.size > self.maxSize):
+            self.remove(self.queueFirst)
+    
+    def moveToTop(self, node):
+        assert node.inCache, 'Node not in cache'
+        assert node.index in self.table.keys(),'Node not in table'
+        if (self.queueLast != node):
+            self.removeFromQueue(node)
+            self.appendToQueue(node)
+    
+    def update(self, node):
+        assert node.index != None, 'Node not in tree'
+        if (node.inCache):
+            self.moveToTop(node)
+        else:
+            self.appendToCache(node)
+    
+    def lookup(self, index):
+        if (index in self.table.keys()):
+            node = self.table[index]
+            self.moveToTop(node)
+            return node
+        else:
+            return None
+
+
+            
+
+    
+
+    
+  
+    
+    
+
 class TokenTree:
 
     def __init__(self, file, mode):
@@ -101,10 +195,12 @@ class TokenTree:
     
     def appendNode(self, node):
         assert self.mode=='w',"Read only"
+        assert node.index == None, 'Appending existing node!'
         offset = 8+13*self.size
         if (offset+13 > self.pageSize*4096):
             self.appendPage()
         self.mm[offset:offset+13] = node.content
+        node.index = self.size
         self.size+=1
     
     def readNode(self, index):
