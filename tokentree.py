@@ -336,6 +336,10 @@ class TokenTree:
                 result[token] = self.getLevel1Node(token)
         else:
             parentNode = self.getNode(tokenPath)
+            
+            if (parentNode == None):
+                return result
+            
             if (parentNode.child == 0):
                 return result
             else:
