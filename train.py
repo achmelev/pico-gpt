@@ -7,12 +7,13 @@ import math
 import torch
 from time import time
 from torch.nn import functional as F
-from timers import create_timer,delete_timer,has_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg
+from timers import create_timer,delete_timer,has_timer, start, stop, get_time_sum, get_time_sum_fmt, get_time_avg_fmt, get_count, get_time_avg, has_timer
 from os.path import isfile
 from pickle import dump, load
+from treemodel import TokenTreeModel
 
 class Trainer:
-    def __init__(self, minutes_to_train):
+    def __init__(self, minutes_to_train, gpt = True):
         #Params
         self.minutes_to_train = minutes_to_train
         self.weight_decay = get_float_config_value('weight_decay')
@@ -28,14 +29,24 @@ class Trainer:
         self.log_interval = get_int_config_value('log_interval')
         self.max_epochs_without_improvement = get_int_config_value('max_epochs_without_improvement')
 
+        self.gpt = gpt
+
+        if (gpt):
+            file_prefix=""
+        else:
+            file_prefix="tree_"
+
         #State
-        self.state_file = workDir+"state_dict.bin"
+        self.state_file = workDir+file_prefix+"state_dict.bin"
         self.state = {'lr_counter':0, 'min_val_loss': float("inf")}
         self.resuming = False
         
         #Model
-        self.model_file = workDir+"model_dict.bin"
-        self.model = GPT()
+        self.model_file = workDir+file_prefix+"model_dict.bin"
+        if (gpt):
+            self.model = GPT()
+        else:
+            self.model = TokenTreeModel()
         self.model.to(device)
 
         #Data Loader
@@ -56,7 +67,7 @@ class Trainer:
         ]
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
-        use_fused = fused_available and device == 'cuda'
+        use_fused = gpt and fused_available and device == 'cuda'
         if (use_fused):
             log.info('Using fused version of the AdamW optimizer')
         extra_args = dict(fused=True) if use_fused else dict()
@@ -151,7 +162,8 @@ class Trainer:
         log.info("################################################################################")
         log.info("Starting training for "+str(self.minutes_to_train)+" minutes")
         log.info("The model has "+str(self.model.get_num_params())+" parameters")
-        print_config()
+        if (self.gpt):
+            print_config()
         if (self.resuming):
             log.info("Resuming from saved state with min_val_loss = "+str(self.state['min_val_loss']))
         log.info("################################################################################")
@@ -197,6 +209,7 @@ class Trainer:
                 log.info('Has been running since '+get_time_sum_fmt('loop'))
                 log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration ("+str(get_time_avg('last_train'))+" sec in the last epoch)")
                 log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
+                
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0

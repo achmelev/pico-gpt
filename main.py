@@ -61,7 +61,16 @@ def do_train(args):
         log.error("Wrong number of arguments for command train")
     else:
         minutes_to_train = int(args[0])
-        trainer = Trainer(minutes_to_train)
+        if (len(args)>1):
+            model = args[1]
+            if (model=='tree'):
+                log.info("Training the tree model")
+                trainer = Trainer(minutes_to_train, gpt=False)
+            else:
+                log.info("Training the gpt model")
+                trainer = Trainer(minutes_to_train, gpt=True)
+        else:
+            trainer = Trainer(minutes_to_train)
         trainer.run()
 
 def do_download(args):
