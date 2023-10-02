@@ -34,22 +34,24 @@ class TokenTreeModel(nn.Module):
                 t_start = 0
 
         zero_value = 0.0
+        firstLevel = self.tree.getNodesChildren([])
         for b_idx in range(b):
             for t_idx in range(t_start,t):
                 for tree_idx in range(self.tree.depth):
                     start_idx = t_idx-tree_idx
                     if (start_idx>=0):
                         sequence = idx[b_idx,start_idx:t_idx].tolist()
-                        children = self.tree.getNodesChildren(sequence)
-                        for token in range(self.vocab_size):
-                            if (token in children.keys()):
-                                node = children[token]
-                                if (node.count == 0):
-                                    value = zero_value
-                                else:
-                                    value = float32(node.count)
-                            else:
+                        if (len(sequence)>0):
+                            children = self.tree.getNodesChildren(sequence)
+                        else:
+                            children = firstLevel
+                            
+                        for token in children.keys():
+                            node = children[token]
+                            if (node.count == 0):
                                 value = zero_value
+                            else:
+                                value = float32(node.count)
                             if (inference):
                                 self.nparray[b_idx, 0,tree_idx,token] = value
                             else:
