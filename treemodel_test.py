@@ -34,7 +34,7 @@ class TokenTreeModelTest (unittest.TestCase):
     
     def test_ml_input(self):
         from environment import log
-        log.debug('TEST MODEL FORWARD')
+        log.debug('TEST ML INPUT')
         from data import DataLoader
         from treemodel import TokenTreeModel
         loader = DataLoader()
@@ -45,11 +45,13 @@ class TokenTreeModelTest (unittest.TestCase):
         batch_size = get_int_config_value("batch_size")
         vocab_size = get_int_config_value("vocab_size")
 
+        log.debug("Create ML Input...")
         ml_input = model.create_ml_input(train_batch[0])
         self.assertEqual(ml_input.size(dim=0), batch_size)
         self.assertEqual(ml_input.size(dim=1), block_size)
         self.assertEqual(ml_input.size(dim=2), model.tree.depth)
         self.assertEqual(ml_input.size(dim=3), vocab_size)
+        log.debug("Done!")
 
         for b_idx in range(batch_size):
             sample = train_batch[0][b_idx].tolist()
@@ -67,6 +69,37 @@ class TokenTreeModelTest (unittest.TestCase):
                     else:
                         for v_idx in range(vocab_size):
                             self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], 0.0)
+    
+    def test_forward(self):
+        from environment import log
+        log.debug('TEST FORWARD')
+        from data import DataLoader
+        from treemodel import TokenTreeModel
+        loader = DataLoader()
+        model = TokenTreeModel()
+        train_batch = loader.batch()
+
+        block_size = get_int_config_value("block_size")
+        batch_size = get_int_config_value("batch_size")
+        vocab_size = get_int_config_value("vocab_size")
+
+        log.debug("Do Forward...")
+        result = model(train_batch[0])
+        self.assertEqual(len(result.size()), 3)
+        self.assertEqual(result.size(dim=0), batch_size)
+        self.assertEqual(result.size(dim=1), block_size)
+        self.assertEqual(result.size(dim=2), vocab_size)
+
+        log.debug("Do Forward...")
+        result = model(train_batch[0], inference=True)
+        self.assertEqual(len(result.size()), 3)
+        self.assertEqual(result.size(dim=0), batch_size)
+        self.assertEqual(result.size(dim=1), 1)
+        self.assertEqual(result.size(dim=2), vocab_size)
+        
+        log.debug("Done!")
+
+        
 
         
     
