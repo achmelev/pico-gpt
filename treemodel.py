@@ -48,8 +48,10 @@ class TokenTreeModel(nn.Module):
     def forward(self, idx, inference=False):
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        ml_input = self.create_ml_input(idx, inference=inference)
-        x = torch.transpose(ml_input,2,3)
+        x = self.create_ml_input(idx, inference=inference)
+        x = F.normalize(x, p=1.0,dim=3)
+        x = torch.transpose(x,2,3)
+        x = torch.log(x)
         x = self.linear(x)
         x = torch.squeeze(x,3)
         return x
