@@ -17,7 +17,7 @@ class TokenTreezer:
 
     def write(self, depth):
         assert depth>0, 'illegal depth '+str(depth)
-        tree = TokenTree(workDir+"tokentree.bin",'w')
+        tree = TokenTree(workDir+"tokentree.bin",'w', cacheMaxSize=get_int_config_value('tree_cache_max_factor')*get_int_config_value('vocab_size'))
         initialTreeDepth = tree.depth
         if (tree.depth == 0):
             tree.initFirstLevel(get_int_config_value('vocab_size'))
