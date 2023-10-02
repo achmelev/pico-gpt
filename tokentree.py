@@ -141,18 +141,9 @@ class TokenTreeCache:
             return None
 
 
-            
-
-    
-
-    
-  
-    
-    
-
 class TokenTree:
 
-    def __init__(self, file, mode):
+    def __init__(self, file, mode, cacheMaxSize = None):
         assert mode=='w' or mode=='r','Illegal mode '+mode
         if (mode == 'r'):
             assert isfile(file),'File '+str(file)+'does not exist!'
@@ -181,6 +172,11 @@ class TokenTree:
             self.mm = mmap(self.f.fileno(), 4096, prot=PROT_WRITE)
             self.size = 0
             self.depth = 0
+        
+        if (cacheMaxSize != None):
+            self.cache = TokenTreeCache(cacheMaxSize)
+        else:
+            self.cache = None
     
     def readHeader(self):
         self.size = int.from_bytes(self.mm[:4],'big')
@@ -202,11 +198,21 @@ class TokenTree:
         self.mm[offset:offset+13] = node.content
         node.index = self.size
         self.size+=1
+        if (self.cache != None):
+            self.cache.append(node)
+
     
     def readNode(self, index):
+        result = None
+        if (self.cache != None):
+            result = self.cache.lookup(index)
+        if (result != None):
+            return result
         assert 8+13*(index+1) <= self.pageSize*4096,'Out of bounds '+str(8+13*(index+1))+":"+str(self.pageSize*4096)
         result =  TokenTreeNode(bytearray(self.mm[8+13*index:8+13*(index+1)]))
         result.index = index
+        if (self.cache != None):
+            self.cache.append(result)
         return result
     
     def getLevel1Node(self, token):
