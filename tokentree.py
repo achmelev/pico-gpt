@@ -121,7 +121,7 @@ class TokenTree:
         index = node.index
         assert self.mode=='w',"Read only"
         assert self.size>index,'Index out of bounds: '+str(index)+":"+str(self.size)
-        assert 8+13*(index+1) < self.pageSize*4096,'Out of bounds '+str(index)+":"+str(self.pageSize*4096)
+        assert 8+13*(index+1) <= self.pageSize*4096,'Out of bounds '+str(8+13*(index+1))+":"+str(self.pageSize*4096)
 
         self.mm[8+13*index:8+13*(index+1)] = node.content
     
