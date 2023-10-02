@@ -13,7 +13,7 @@ class TokenTreeModel(nn.Module):
         super().__init__()
         self.vocab_size = get_int_config_value('vocab_size')
         self.block_size = get_int_config_value('block_size')
-        self.tree = TokenTree(workDir+'tokentree.bin','r', cacheMaxSize=get_int_config_value('tree_cache_max_factor')*get_int_config_value('vocab_size'))
+        self.tree = TokenTree(workDir+'tokentree.bin','r')
         assert self.vocab_size==self.tree.vocab_size,'Wrong vocab size '+str(self.vocab_size)+"!="+str(self.tree.vocab_size)
         log.info('Initialized tree model vocab_size = '+str(self.vocab_size)+", tree size "+str(self.tree.size)+", tree depth = "+str(self.tree.depth))
         self.linear = nn.Linear(self.tree.depth,1)
@@ -45,7 +45,7 @@ class TokenTreeModel(nn.Module):
                             children = self.tree.getNodesChildren(sequence)
                         else:
                             children = firstLevel
-                            
+
                         for token in children.keys():
                             node = children[token]
                             if (node.count == 0):

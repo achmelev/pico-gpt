@@ -1,6 +1,6 @@
 import unittest
 
-from tokentree import TokenTreeNode, TokenTree, TokenTreeCache
+from tokentree import TokenTreeNode, TokenTree
 from os import remove
 from os.path import isfile
 from random import randint
@@ -101,59 +101,7 @@ class TokenTreeTest(unittest.TestCase):
         self.assertEqual(100005, node.count)
         self.assertEqual(1230006000, node.sibling)
         self.assertEqual(267004006, node.child)
-    
-    def verifyCache(self, cache, index = None):
-        if (index != None):
-            if (index < 10):#Cache noch nicht aufgefüllt
-                self.assertEqual(index+1, cache.size)
-            else:
-                self.assertEqual(10, cache.size)
-        else:
-            self.assertEqual(10, cache.size)
-        
-        self.assertEqual(cache.size, len(cache.table))
-
-        if (index !=None):
-            for i in range(max(0, index+1-cache.size),cache.size):
-                node = cache.table[i]
-                self.assertEqual(i, node.index)
-                self.assertTrue(node.inCache)
-        
-        count = 1
-        self.assertEqual(None, cache.queueFirst.cacheQueuePrevious)
-        currentNode = cache.queueFirst
-        while(currentNode != None):
-            self.assertEqual(currentNode, cache.table[currentNode.index])
-            if (index != None):
-                self.assertEqual(currentNode.index, max(0, index+1-cache.size)+count-1)
-            if (currentNode.cacheQueueNext != None):
-                self.assertEqual(currentNode.cacheQueueNext.cacheQueuePrevious, currentNode)
-                currentNode = currentNode.cacheQueueNext
-                count+=1
-            else:
-                self.assertEqual(currentNode, cache.queueLast)
-                currentNode = None
-        self.assertEqual(count, len(cache.table))
-
-        
-
-
-
-    def test_cache(self):
-        cache = TokenTreeCache(10)
-        for index in range(15):
-             node = TokenTreeNode()
-             node.index = index
-             cache.append(node)
-             self.verifyCache(cache, index)
-        
-        node = cache.lookup(0)
-        self.assertEqual(None, node)
-        node = cache.lookup(7)
-        self.assertEqual(node.index, 7)
-        self.assertEqual(node, cache.queueLast)
-        self.verifyCache(cache)
-    
+     
     def test_tree_1(self):
         tree = TokenTree('testtree.bin', 'w')
         self.assertEqual(1, tree.pageSize)
@@ -186,27 +134,7 @@ class TokenTreeTest(unittest.TestCase):
             self.assertEqual(token, node.count)
         tree.close()
 
-    def test_tree_2_cache(self):
-        tree = TokenTree('testtree.bin', 'w', cacheMaxSize=50)
-        for token in range(400):
-            node = TokenTreeNode()
-            node.token = token
-            tree.appendNode(node)
-        tree.close()
-        tree = TokenTree('testtree.bin', 'w',cacheMaxSize=50)
-        for token in range(400):
-            node = tree.readNode(token)
-            node.count = token
-            tree.writeNode(node)
-        tree.close()
 
-        tree = TokenTree('testtree.bin', 'w',cacheMaxSize=50)
-        self.assertEqual(400, tree.size)
-        for token in range(400):
-            node = tree.readNode(token)
-            self.assertEqual(token, node.token)
-            self.assertEqual(token, node.count)
-        tree.close()
 
     def test_tree_3(self):
         tree = TokenTree('testtree.bin', 'w')
@@ -218,18 +146,7 @@ class TokenTreeTest(unittest.TestCase):
             self.assertTrue(node != None)
         tree.close()
         remove('testtree.bin')
-    
-    def test_tree_3_cache(self):
-        tree = TokenTree('testtree.bin', 'w',cacheMaxSize=200)
-        tree.initFirstLevel(50)
-        tree.close()
-        tree = TokenTree('testtree.bin', 'r',cacheMaxSize=200)
-        for token in range(50):
-            node = tree.getNode([token])
-            self.assertTrue(node != None)
-        tree.close()
-        remove('testtree.bin')
-    
+        
     
     def test_tree_4(self):
         for _ in range(50):
@@ -262,36 +179,7 @@ class TokenTreeTest(unittest.TestCase):
             tree.close()
             remove('testtree.bin')
     
-    def test_tree_4_cache(self):
-        for _ in range(50):
-            rtree = RandomTokenTree()
-            rtree.createRandomTestData(5,50)
-            tree = TokenTree('testtree.bin', 'w', cacheMaxSize=20)
-            tree.initFirstLevel(10)
-            for sequence in rtree.sequences:
-                tree.insertOrUpdateToken(sequence)
-            tree.close()
-            tree = TokenTree('testtree.bin', 'r',cacheMaxSize=20)
-            self.assertEqual(5, tree.depth)
-            
-            count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel()
-            self.assertEqual(count, tree.size)
-            for sequence in rtree.sequences:
-
-                frequency, children = rtree.getRandomFrequency(sequence)
-                node = tree.getNode(sequence)
-                self.assertTrue(node != None)
-                self.assertEqual(sequence[-1:][0], node.token)
-                self.assertEqual(frequency, node.count)
-                childrenNodes = tree.getNodesChildren(sequence)
-                self.assertTrue(childrenNodes != None)
-                self.assertEqual(len(children), len(childrenNodes))
-                for token in children.keys():
-                    frequency1 = children[token][0]
-                    frequency2 = childrenNodes[token].count
-                    self.assertEqual(frequency1, frequency2)
-            tree.close()
-            remove('testtree.bin')
+    
     
     def test_tree_5(self):
         for _ in range(25):
@@ -329,51 +217,6 @@ class TokenTreeTest(unittest.TestCase):
                     self.assertEqual(frequency1, frequency2)
             tree.close()
             remove('testtree.bin')
-    
-    def test_tree_5_cache(self):
-        for _ in range(25):
-            rtree = RandomTokenTree()
-            rtree.createRandomTestData(7,70, startDepth=1, stopDepth=5)
-            tree = TokenTree('testtree.bin', 'w',cacheMaxSize=20)
-            tree.initFirstLevel(10)
-            for sequence in rtree.sequences:
-                tree.insertOrUpdateToken(sequence)
-            tree.close()
-            rtree.createRandomTestData(7,70, startDepth=6, stopDepth=7)
-            tree = TokenTree('testtree.bin', 'w',cacheMaxSize=20)
-            self.assertEqual(5, tree.depth)
-            for sequence in rtree.sequences:
-                if (len(sequence)>=6):
-                    tree.insertOrUpdateToken(sequence)
-            tree.close()
-            tree = TokenTree('testtree.bin', 'r',cacheMaxSize=20)
-            self.assertEqual(7, tree.depth)
-            count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel()
-            self.assertEqual(count, tree.size)
-            for sequence in rtree.sequences:
-
-                frequency, children = rtree.getRandomFrequency(sequence)
-                node = tree.getNode(sequence)
-                self.assertTrue(node != None)
-                self.assertEqual(sequence[-1:][0], node.token)
-                self.assertEqual(frequency, node.count)
-                childrenNodes = tree.getNodesChildren(sequence)
-                self.assertTrue(childrenNodes != None)
-                self.assertEqual(len(children), len(childrenNodes))
-                for token in children.keys():
-                    frequency1 = children[token][0]
-                    frequency2 = childrenNodes[token].count
-                    self.assertEqual(frequency1, frequency2)
-            tree.close()
-            remove('testtree.bin')
-
-    
-    
-
-        
-
-        
-        
 
 
 if __name__ == '__main__':

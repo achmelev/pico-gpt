@@ -35,8 +35,6 @@ class TokenTreeModelPFTest (unittest.TestCase):
         from treemodel import TokenTreeModel
         loader = DataLoader()
         model = TokenTreeModel()
-        if (model.tree.cache == None):
-            log.debug('NO CACHE')
 
         create_timer('ml_input')
 
