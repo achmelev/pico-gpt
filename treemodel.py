@@ -45,8 +45,12 @@ class TokenTreeModel(nn.Module):
         assert self.vocab_size==tree.vocab_size,'Wrong vocab size '+str(self.vocab_size)+"!="+str(tree.vocab_size)
         log.info('Initialized tree model vocab_size = '+str(self.vocab_size)+", tree size "+str(tree.size)+", tree depth = "+str(tree.depth))
         self.block_size = tree.depth
-        self.linear = nn.Linear(tree.depth,1)
-        torch.nn.init.normal_(self.linear.weight, mean=0.0, std=0.02)
+        self.linear = nn.Linear(tree.depth,1, bias=False)
+        self.relu = nn.ReLU()
+        linear_coefs = []
+        for i in range(tree.depth):
+            linear_coefs.append(math.pow(10,i))
+        self.linear.weight.data = torch.tensor([linear_coefs])
         self.np_array = None
         self.tree = tree
 
@@ -89,6 +93,7 @@ class TokenTreeModel(nn.Module):
 
         result =  torch.from_numpy(self.nparray)
         return result
+    
 
     def forward(self, idx, inference=False):
         global zero_value
@@ -96,10 +101,11 @@ class TokenTreeModel(nn.Module):
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         x = self.create_ml_input(idx, inference=inference)
         x = torch.transpose(x,2,3)
-        x = torch.log(x)-math.log(zero_value)
-        #print(x)
         x = self.linear(x)
+        x = self.relu(x)+zero_value
         x = torch.squeeze(x,3)
+        x = F.normalize(x, p=1.0, dim=2)
+        x = torch.log(x)
         return x
     
     def get_num_params(self):

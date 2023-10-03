@@ -100,7 +100,10 @@ class Trainer:
         return self.min_learning_rate + coeff * (self.learning_rate - self.min_learning_rate)
 
     def calculate_loss(self, logits, targets):
-        return F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        if (self.gpt):
+            return F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        else:             
+            return F.nll_loss(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
     
     def write_checkpoint(self):
         log.info("Saving model to "+self.model_file)

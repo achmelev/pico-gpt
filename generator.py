@@ -40,6 +40,8 @@ class TextGenerator:
         if (isfile(self.model_file)):
             log.info("Loading model from "+self.model_file)
             self.model.load_state_dict(torch.load(self.model_file, map_location = torch.device(device)))
+            if (not gpt):
+                log.info("Tree model params: "+str(self.model.linear.weight.data))
         self.model.eval()
 
         if (gpt):
@@ -65,7 +67,8 @@ class TextGenerator:
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
         if not self.gpt:
-            return F.normalize(logits, p = 1.0)
+            result =  torch.exp(logits)
+            return result
         # apply temperature
         assert temperature > 0.0, "Illegal temperature "+str(temperature)
         if (temperature != 1.0):

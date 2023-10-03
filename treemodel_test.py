@@ -75,11 +75,12 @@ class TokenTreeModelTest (unittest.TestCase):
         log.debug('TEST FORWARD')
         from data import DataLoader
         from treemodel import TokenTreeModel
-        loader = DataLoader()
-        model = TokenTreeModel()
+        model = TokenTreeModel(initZeroValue=0.0001)
+        loader = DataLoader(block_size=model.tree.depth)
+       
         train_batch = loader.batch()
 
-        block_size = get_int_config_value("block_size")
+        block_size = model.tree.depth
         batch_size = get_int_config_value("batch_size")
         vocab_size = get_int_config_value("vocab_size")
 
