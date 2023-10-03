@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from numpy import zeros, float32
+from numpy import zeros, float32, empty
 
 from environment import log, get_int_config_value, workDir
 from tokentree import TokenTree
@@ -9,6 +9,28 @@ from timers import create_timer, start, stop
 from functools import lru_cache
 
 tree = None
+
+@lru_cache
+def getNextTokenCounts(tokenPath):
+    vocab_size = get_int_config_value('vocab_size')
+    result = empty((vocab_size),dtype=float32)
+    children =  tree.getNodesChildren(tokenPath)
+        
+    zero_value = 0.0
+    for token in range(vocab_size):
+        if (token in children.keys()):
+            node = children[token]
+            if (node.count == 0):
+                value = zero_value
+            else:
+                value = float32(node.count)
+        else:
+            value = zero_value 
+        result[token] = value
+
+    return result
+        
+
 
 class TokenTreeModel(nn.Module):
 
@@ -30,41 +52,39 @@ class TokenTreeModel(nn.Module):
         global tree
         tree.close()
         tree = None
+        getNextTokenCounts.cache_clear()
     
     def create_ml_input(self, idx, inference=False):
         global tree
         b, t = idx.size()
         if (self.np_array == None):
             if (inference):
-                self.nparray = zeros((b,1,tree.depth, self.vocab_size),dtype=float32)
+                self.nparray = empty((b,1,tree.depth, self.vocab_size),dtype=float32)
                 t_start = t-1
             else:
-                self.nparray = zeros((b,t,tree.depth, self.vocab_size),dtype=float32)
+                self.nparray = empty((b,t,tree.depth, self.vocab_size),dtype=float32)
                 t_start = 0
 
         zero_value = 0.0
-        firstLevel = tree.getNodesChildren([])
+        zeros = empty((self.vocab_size),dtype=float32)
+        for token in range(self.vocab_size):
+            zeros[token] = zero_value
         for b_idx in range(b):
             for t_idx in range(t_start,t):
                 for tree_idx in range(tree.depth):
                     start_idx = t_idx-tree_idx
                     if (start_idx>=0):
                         sequence = idx[b_idx,start_idx:t_idx].tolist()
-                        if (len(sequence)>0):
-                            children = tree.getNodesChildren(sequence)
-                        else:
-                            children = firstLevel
+                        token_counts = getNextTokenCounts(tuple(sequence))
+                    else:
+                        token_counts = zeros
+                        
+                    if  inference:
+                        self.nparray[b_idx, 0,tree_idx] = token_counts
+                    else:
+                        self.nparray[b_idx, t_idx,tree_idx] = token_counts
+                    
 
-                        for token in children.keys():
-                            node = children[token]
-                            if (node.count == 0):
-                                value = zero_value
-                            else:
-                                value = float32(node.count)
-                            if (inference):
-                                self.nparray[b_idx, 0,tree_idx,token] = value
-                            else:
-                                self.nparray[b_idx, t_idx,tree_idx,token] = value
 
         result =  torch.from_numpy(self.nparray)
         return result
