@@ -9,6 +9,7 @@ from timers import create_timer, start, stop
 from functools import lru_cache
 
 tree = None
+zero_value = 0.0
 
 @lru_cache(maxsize=get_int_config_value('treemodel_cache_size'))
 def getNextTokenCounts(tokenPath):
@@ -16,7 +17,6 @@ def getNextTokenCounts(tokenPath):
     result = empty((vocab_size),dtype=float32)
     children =  tree.getNodesChildren(tokenPath)
         
-    zero_value = 0.0
     for token in range(vocab_size):
         if (token in children.keys()):
             node = children[token]
@@ -34,9 +34,10 @@ def getNextTokenCounts(tokenPath):
 
 class TokenTreeModel(nn.Module):
 
-    def __init__(self):
+    def __init__(self, initZeroValue = 0.0):
         super().__init__()
-        global tree
+        global tree, zero_value
+        zero_value = initZeroValue
         assert tree == None,'This model is a singleton!'
         self.vocab_size = get_int_config_value('vocab_size')
         self.block_size = get_int_config_value('block_size')
@@ -55,7 +56,7 @@ class TokenTreeModel(nn.Module):
         getNextTokenCounts.cache_clear()
     
     def create_ml_input(self, idx, inference=False):
-        global tree
+        global tree, zero_value
         b, t = idx.size()
         if (self.np_array == None):
             if (inference):
@@ -65,7 +66,6 @@ class TokenTreeModel(nn.Module):
                 self.nparray = empty((b,t,tree.depth, self.vocab_size),dtype=float32)
                 t_start = 0
 
-        zero_value = 0.0
         zeros = empty((self.vocab_size),dtype=float32)
         for token in range(self.vocab_size):
             zeros[token] = zero_value

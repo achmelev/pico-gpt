@@ -1,5 +1,5 @@
 import unittest
-from environment import initEnv, get_int_config_value
+from environment import initEnv, get_int_config_value, get_float_config_value
 from shutil import rmtree
 from torch.nn import functional as F
 from tokentree_test import RandomTokenTree
@@ -38,7 +38,7 @@ class TokenTreeModelTest (unittest.TestCase):
         from data import DataLoader
         from treemodel import TokenTreeModel
         loader = DataLoader()
-        model = TokenTreeModel()
+        model = TokenTreeModel(get_float_config_value('treemodel_zero_value'))
         train_batch = loader.batch()
 
         block_size = get_int_config_value("block_size")
@@ -65,10 +65,10 @@ class TokenTreeModelTest (unittest.TestCase):
                             if (v_idx in children.keys()):
                                 self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], children.get(v_idx)[0])
                             else:
-                                self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], 0.0)
+                                self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], get_float_config_value('treemodel_zero_value'))
                     else:
                         for v_idx in range(vocab_size):
-                            self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], 0.0)
+                            self.assertEqual(ml_input[b_idx,t_idx,s_idx,v_idx], get_float_config_value('treemodel_zero_value'))
     
     def test_forward(self):
         from environment import log

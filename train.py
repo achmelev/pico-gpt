@@ -46,7 +46,7 @@ class Trainer:
         if (gpt):
             self.model = GPT()
         else:
-            self.model = TokenTreeModel()
+            self.model = TokenTreeModel(get_float_config_value('treemodel_zero_value'))
         self.model.to(device)
 
         #Data Loader
