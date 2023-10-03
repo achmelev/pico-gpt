@@ -1,4 +1,5 @@
 import torch
+import math
 import torch.nn as nn
 from torch.nn import functional as F
 from numpy import zeros, float32, empty
@@ -90,11 +91,12 @@ class TokenTreeModel(nn.Module):
         return result
 
     def forward(self, idx, inference=False):
+        global zero_value
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         x = self.create_ml_input(idx, inference=inference)
         x = torch.transpose(x,2,3)
-        #x = torch.log(x)
+        x = torch.log(x)-math.log(zero_value)
         #print(x)
         x = self.linear(x)
         x = torch.squeeze(x,3)
