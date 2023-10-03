@@ -41,10 +41,10 @@ class TokenTreeModel(nn.Module):
         zero_value = initZeroValue
         assert tree == None,'This model is a singleton!'
         self.vocab_size = get_int_config_value('vocab_size')
-        self.block_size = get_int_config_value('block_size')
         tree = TokenTree(workDir+'tokentree.bin','r')
         assert self.vocab_size==tree.vocab_size,'Wrong vocab size '+str(self.vocab_size)+"!="+str(tree.vocab_size)
         log.info('Initialized tree model vocab_size = '+str(self.vocab_size)+", tree size "+str(tree.size)+", tree depth = "+str(tree.depth))
+        self.block_size = tree.depth
         self.linear = nn.Linear(tree.depth,1)
         torch.nn.init.normal_(self.linear.weight, mean=0.0, std=0.02)
         self.np_array = None

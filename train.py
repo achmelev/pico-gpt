@@ -15,19 +15,21 @@ from treemodel import TokenTreeModel
 class Trainer:
     def __init__(self, minutes_to_train, gpt = True):
         #Params
+        params_prefix = ""
+        if (not gpt):
+            params_prefix='treemodel_'
         self.minutes_to_train = minutes_to_train
         self.weight_decay = get_float_config_value('weight_decay')
-        self.learning_rate = get_float_config_value('learning_rate')
+        self.learning_rate = get_float_config_value(params_prefix+'learning_rate')
         self.min_learning_rate = get_float_config_value('min_learning_rate')
         self.betas = (get_float_config_value('beta1'), get_float_config_value('beta2'))
         self.decay_lr = get_bool_config_value('decay_lr')
         self.warmup_iters = get_int_config_value('warmup_iters')
         self.lr_decay_iters = get_int_config_value('lr_decay_iters')
-        self.eval_interval = get_int_config_value('eval_interval')
-        self.grad_clip = get_float_config_value('grad_clip')
-        self.eval_iters = get_int_config_value('eval_iters')
-        self.log_interval = get_int_config_value('log_interval')
-        self.max_epochs_without_improvement = get_int_config_value('max_epochs_without_improvement')
+        self.eval_interval = get_int_config_value(params_prefix+'eval_interval')
+        self.eval_iters = get_int_config_value(params_prefix+'eval_iters')
+        self.log_interval = get_int_config_value(params_prefix+'log_interval')
+        self.max_epochs_without_improvement = get_int_config_value(params_prefix+'max_epochs_without_improvement')
 
         self.gpt = gpt
 
@@ -50,33 +52,40 @@ class Trainer:
         self.model.to(device)
 
         #Data Loader
-        self.loader = DataLoader()
+        if (gpt):
+            self.loader = DataLoader()
+        else:
+            self.loader = DataLoader(block_size = self.model.block_size)
 
         #Optimizer 
-        # start with all of the candidate parameters
-        param_dict = {pn: p for pn, p in self.model.named_parameters()}
-        # filter out those that do not require grad -> eigentlich unnötig, da sie alle gradient erfordern
-        param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
-        # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
-        # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
-        decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
-        nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
-        optim_groups = [
-            {'params': decay_params, 'weight_decay': self.weight_decay},
-            {'params': nodecay_params, 'weight_decay': 0.0}
-        ]
-        # Create AdamW optimizer and use the fused version if it is available
-        fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
-        use_fused = gpt and fused_available and device == 'cuda'
-        if (use_fused):
-            log.info('Using fused version of the AdamW optimizer')
-        extra_args = dict(fused=True) if use_fused else dict()
-        self.optimizer = torch.optim.AdamW(optim_groups, lr=self.learning_rate, betas=self.betas, **extra_args)
+        if (gpt):
+            # start with all of the candidate parameters
+            param_dict = {pn: p for pn, p in self.model.named_parameters()}
+            # filter out those that do not require grad -> eigentlich unnötig, da sie alle gradient erfordern
+            param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+            # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
+            # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
+            decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
+            nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
+            optim_groups = [
+                {'params': decay_params, 'weight_decay': self.weight_decay},
+                {'params': nodecay_params, 'weight_decay': 0.0}
+            ]
+            # Create AdamW optimizer and use the fused version if it is available
+            fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
+            use_fused = gpt and fused_available and device == 'cuda'
+            if (use_fused):
+                log.info('Using fused version of the AdamW optimizer')
+            extra_args = dict(fused=True) if use_fused else dict()
+            self.optimizer = torch.optim.AdamW(optim_groups, lr=self.learning_rate, betas=self.betas, **extra_args)
+        else:
+            self.optimizer = torch.optim.Adam(self.model.parameters(), self.learning_rate)
+
 
         #Resuming from last checkpoint, or partly from pretrained model
         self.resume()
     
-    # learning rate decay scheduler (cosine with warmup)
+    # learning rate decay scheduler (cosine with warmup) + For GPT Model
     def get_lr(self, it):
         # 1) linear warmup for warmup_iters steps
         if it < self.warmup_iters:
@@ -178,9 +187,12 @@ class Trainer:
             train_batch = self.loader.batch()
             #Set learning rate
             # determine and set the learning rate for this iteration
-            lr = self.get_lr(self.state['lr_counter']+1) if self.decay_lr else self.learning_rate
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] = lr
+            if (self.gpt):
+                lr = self.get_lr(self.state['lr_counter']+1) if self.decay_lr else self.learning_rate
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = lr
+            else:
+                lr = self.learning_rate
             # zero the parameter gradients
             self.optimizer.zero_grad(set_to_none=True)
             # forward + backward + optimize
