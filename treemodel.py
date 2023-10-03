@@ -10,7 +10,7 @@ from functools import lru_cache
 
 tree = None
 
-@lru_cache
+@lru_cache(maxsize=get_int_config_value('treemodel_cache_size'))
 def getNextTokenCounts(tokenPath):
     vocab_size = get_int_config_value('vocab_size')
     result = empty((vocab_size),dtype=float32)
@@ -78,7 +78,7 @@ class TokenTreeModel(nn.Module):
                         token_counts = getNextTokenCounts(tuple(sequence))
                     else:
                         token_counts = zeros
-                        
+
                     if  inference:
                         self.nparray[b_idx, 0,tree_idx] = token_counts
                     else:

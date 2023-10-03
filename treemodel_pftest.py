@@ -32,7 +32,7 @@ class TokenTreeModelPFTest (unittest.TestCase):
         from environment import log
         log.debug('TEST ML INPUT')
         from data import DataLoader
-        from treemodel import TokenTreeModel
+        from treemodel import TokenTreeModel, getNextTokenCounts
         loader = DataLoader()
         model = TokenTreeModel()
 
@@ -45,6 +45,7 @@ class TokenTreeModelPFTest (unittest.TestCase):
             stop('ml_input')
         
         log.info('ML Input time '+get_time_sum_fmt('ml_input'))
+        log.info('Cache info = '+str(getNextTokenCounts.cache_info()))
 
 if __name__ == '__main__':
     unittest.main()      
