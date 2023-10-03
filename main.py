@@ -39,7 +39,15 @@ def do_generate(args):
         prompt = ""
     else:
         prompt = args[0]
-    generator = TextGenerator(prompt = prompt)
+    
+    gpt = True
+    if (prompt == 'tree'): #Tree and empty tree
+        prompt = ""
+        gpt = False
+    elif (args != None and len(args)>1):
+        gpt = args[1] != 'tree'
+
+    generator = TextGenerator(prompt = prompt, gpt=gpt)
     generator.generate_console()
        
 

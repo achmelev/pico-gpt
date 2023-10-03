@@ -1,6 +1,7 @@
 from environment import log, device, get_int_config_value, get_float_config_value, workDir
 from tokenizer import Tokenizer
 from model import GPT
+from treemodel import TokenTreeModel
 
 import torch
 from torch.nn import functional as F
@@ -8,10 +9,10 @@ from os.path import isfile
 
 class TextGenerator:
 
-    def __init__(self, prompt = None, startToken = None) -> None:
+    def __init__(self, prompt = None, startToken = None, gpt = True) -> None:
 
+        self.gpt = gpt
         #Parameters
-        self.block_size = get_int_config_value('block_size')
         self.temperature = get_float_config_value('temperature')
         self.top_p = get_float_config_value('top_p')
         self.max_line_length = get_int_config_value("max_line_length")
@@ -25,13 +26,26 @@ class TextGenerator:
             self.tokenizer.load_vocab()
             self.vocab_loaded = True
         
+        if (gpt):
+            file_prefix=""
+        else:
+            file_prefix="tree_"
+        
         #Model
-        self.model = GPT()
-        self.model_file = workDir+"model_dict.bin"
+        if (gpt):
+            self.model = GPT()
+        else:
+            self.model = TokenTreeModel(get_float_config_value('treemodel_zero_value'))
+        self.model_file = workDir+file_prefix+"model_dict.bin"
         if (isfile(self.model_file)):
             log.info("Loading model from "+self.model_file)
             self.model.load_state_dict(torch.load(self.model_file, map_location = torch.device(device)))
         self.model.eval()
+
+        if (gpt):
+            self.block_size = get_int_config_value('block_size')
+        else:
+            self.block_size = self.model.tree.depth
         
         #Context
         if (prompt != None):
@@ -42,11 +56,16 @@ class TextGenerator:
         else:
             start_ids = [startToken]
         
+        if len(start_ids) > self.block_size:
+            start_ids[-self.block_size:]
+        
         self.ctx = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
 
 
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
+        if not self.gpt:
+            return F.normalize(logits, p = 1.0)
         # apply temperature
         assert temperature > 0.0, "Illegal temperature "+str(temperature)
         if (temperature != 1.0):
@@ -79,6 +98,7 @@ class TextGenerator:
 
         #Get Probs
         probs = self.get_next_token_probs(logits, self.temperature, self.top_p)
+        #print(probs)
         
         # sample from the distribution
         idx_next = torch.multinomial(probs, num_samples=1)
@@ -101,7 +121,6 @@ class TextGenerator:
                 prompt_counter+=1
             else:
                 token = self.generate_token()
-
             if token == '<end/>':
                 if len(current_word) >0:
                     if (line_length == 0):
