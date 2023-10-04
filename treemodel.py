@@ -49,7 +49,7 @@ class TokenTreeModel(nn.Module):
         self.relu = nn.ReLU()
         linear_coefs = []
         for i in range(tree.depth):
-            linear_coefs.append(10*i+1)
+            linear_coefs.append(10.0*i+1.0)
         self.linear.weight.data = torch.tensor([linear_coefs])
         self.np_array = None
         self.tree = tree
