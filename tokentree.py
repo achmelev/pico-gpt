@@ -88,6 +88,7 @@ class TokenTree:
             self.size = 0
             self.depth = 0
         
+        
     
     def readHeader(self):
         self.size = int.from_bytes(self.mm[:4],'big')
@@ -234,6 +235,19 @@ class TokenTree:
                 return currentNode
     
 
+    def getNodesChildrenList(self, parentNode):
+        result = []
+        if (parentNode.child == 0):
+            return result
+        else:
+            currentNode = self.readNode(parentNode.child)
+            result.append(currentNode)
+            while (currentNode.sibling != 0):
+                currentNode = self.readNode(currentNode.sibling)
+                result.append(currentNode)
+        return result
+
+
     def getNodesChildren(self, tokenPath):
         result = {}
         if (len(tokenPath) == 0):
@@ -259,6 +273,24 @@ class TokenTree:
         assert self.mode == 'w','Read-Only tree'
         self.pageSize+=1
         self.mm.resize(int(self.pageSize*4096))
+    
+    def doTraverse(self, nodesPath,callback):
+        callback.onTraverse(nodesPath)
+        children = self.getNodesChildrenList(nodesPath[len(nodesPath)-1])
+        for childNode in children:
+            nodesPath.append(childNode)
+            self.doTraverse(nodesPath, callback)
+            nodesPath.pop(len(nodesPath)-1)
+
+
+    def traverse(self, callback):
+        assert self.mode=='r','Traversing only an read-only tree'
+        for token in range(self.vocab_size):
+            node = self.getLevel1Node(token)
+            if (node.count > 0):
+                self.doTraverse([node], callback)
+            
+
 
     def close(self):
         if (self.mode == 'w'):

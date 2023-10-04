@@ -13,6 +13,7 @@ from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
 from tokentreezer import TokenTreezer
+from treereader import TokenTreeReader
 
 command = argv[2]
 args = None
@@ -98,11 +99,15 @@ def do_config(args):
 
 def do_token_tree(args):
     if (args == None):
-        log.error("Wrong number of arguments for command download")
+        log.error("Wrong number of arguments for command tokentree")
     else:
-        depth = int(args[0])
-        treezer = TokenTreezer()
-        treezer.write(depth)
+        if (args[0] != 'stats'):
+            depth = int(args[0])
+            treezer = TokenTreezer()
+            treezer.write(depth)
+        else:
+            reader = TokenTreeReader()
+            reader.print_stats()
         
 
 
