@@ -2,6 +2,7 @@ from environment import log, get_int_config_value, workDir, device
 from tokentree import TokenTree
 from os.path import isfile
 from numpy import memmap, uint16, array
+import math
 
 class TokenTreezer:
 
@@ -14,7 +15,19 @@ class TokenTreezer:
         for i in range(len(narray)):
             result.append(int(narray[i]))
         return result
-        
+    
+    def createNumberFromTokenPath(self, tokenPath):
+        assert len(tokenPath) >0, 'Empty token path not allowed'
+
+        result = 0
+        for pos in range(len(tokenPath)):
+            digit = tokenPath[-pos-1]
+            base = 1
+            for _ in range(pos):
+                base*=self.tree.vocab_size
+            result+=(base*digit)
+        return result
+
     def onTraverse(self, nodePath):
         
         level = len(nodePath)
@@ -26,7 +39,7 @@ class TokenTreezer:
             tokenPath = []
             for n in nodePath:
                 tokenPath.append(n.token)
-            self.lastLevelDict[tuple(tokenPath)] = n.index
+            self.lastLevelDict[self.createNumberFromTokenPath(tokenPath)] = n.index
     
     def createLastLevelDict(self):
         log.info('Preparing append, creating last level dict')
@@ -36,7 +49,7 @@ class TokenTreezer:
         log.info('Done. Got '+str(self.lastLevelDictCount)+' last level nodes in the dict')
     
     def getLastLevelNode(self, tokenPath):
-        return self.lastLevelDict[tuple(tokenPath)]
+        return self.lastLevelDict[self.createNumberFromTokenPath(tokenPath)]
 
     def write(self, depth):
         assert depth>0, 'illegal depth '+str(depth)
