@@ -284,7 +284,6 @@ class TokenTree:
 
 
     def traverse(self, callback):
-        assert self.mode=='r','Traversing only an read-only tree'
         for token in range(self.vocab_size):
             node = self.getLevel1Node(token)
             if (node.count > 0):
