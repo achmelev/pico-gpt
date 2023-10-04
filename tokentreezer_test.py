@@ -28,15 +28,13 @@ class TokentreezerTest (unittest.TestCase):
         tokenizer.generate_vocab(input_file)
 
         tokenizer.tokenize(input_file)
-        tokentreezer = TokenTreezer()
-        tokentreezer.write(5)
-        tree = TokenTree(workDir+"tokentree.bin",'r')
-        self.assertEqual(tree.depth,5)
-        tree.close()
-        tokentreezer.write(10)
-        tree = TokenTree(workDir+"tokentree.bin",'r')
-        self.assertEqual(tree.depth,10)
-        tree.close()
+
+        for i in range(10):
+            tokentreezer = TokenTreezer()
+            tokentreezer.write(i+1)
+            tree = TokenTree(workDir+"tokentree.bin",'r')
+            self.assertEqual(tree.depth,i+1)
+            tree.close()
     
    
     
@@ -52,8 +50,12 @@ class TokentreezerTest (unittest.TestCase):
         np_tokens.tofile(trf)
         trf.close()
 
-        tokentreezer = TokenTreezer()
-        tokentreezer.write(5)
+        for i in range(5):
+            tokentreezer = TokenTreezer()
+            tokentreezer.write(i+1)
+            tree = TokenTree(workDir+"tokentree.bin",'r')
+            tree.close()
+   
         tree = TokenTree(workDir+"tokentree.bin",'r')
         self.assertEqual(tree.depth,5)
         count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel(get_int_config_value('vocab_size'))
@@ -73,8 +75,11 @@ class TokentreezerTest (unittest.TestCase):
                 self.assertEqual(frequency1, frequency2)
         tree.close()
         rtree.createRandomTestData(10,50, startDepth=6, stopDepth=10)
-        tokentreezer = TokenTreezer()
-        tokentreezer.write(10)
+        for i in range(10):
+            tokentreezer = TokenTreezer()
+            tokentreezer.write(i+1)
+            tree = TokenTree(workDir+"tokentree.bin",'r')
+            tree.close()
         tree = TokenTree(workDir+"tokentree.bin",'r')
         self.assertEqual(tree.depth,10)
         count = rtree.countRandomEntries()+rtree.countTokensNotInFirstLevel(get_int_config_value('vocab_size'))

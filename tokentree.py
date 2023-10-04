@@ -185,7 +185,27 @@ class TokenTree:
         lastSiblingNode.sibling = self.size-1
         self.writeNode(lastSiblingNode)    
 
+    def insertOrUpdateTokenFromParentNode(self, parentNode, tokenPath):
+        if (parentNode.child == 0):
+            if (self.depth+1 == len(tokenPath)):
+                self.depth+=1
+            self.createFirstChild(parentNode, tokenPath[-1:][0])
+        else:
+            node, last_sibling = self.searchTokenNode(parentNode,tokenPath[-1:][0])
+            if (node != None):
+                node.count+=1
+                self.writeNode(node)
+            else:
+                assert last_sibling.sibling == 0,'sibling index set, something wrong'
+                self.appendSibling(last_sibling, tokenPath[-1:][0])
+
     
+    def insertOrUpdateTokenFromParentIndex(self, parentIdx, tokenPath):
+        assert self.depth >=1,"Empty tree"
+        parentNode = self.readNode(parentIdx)
+        assert parentNode != None, 'parent node not found, index = '+str(parentIdx)
+        self.insertOrUpdateTokenFromParentNode(parentNode, tokenPath)
+
     def insertOrUpdateToken(self, tokenPath):
         assert self.depth >=1,"Empty tree"
         self.verifyTokenPath(tokenPath)
@@ -198,20 +218,7 @@ class TokenTree:
         else:
             parentNode = self.getNode(tokenPath[:-1])
             assert parentNode != None, 'parent node missing, add prefixes first!'
-            if (self.depth+1 == len(tokenPath)):
-                self.createFirstChild(parentNode, tokenPath[-1:][0])
-                self.depth+=1
-            else:
-                if (parentNode.child == 0):
-                    self.createFirstChild(parentNode, tokenPath[-1:][0])
-                else:
-                    node, last_sibling = self.searchTokenNode(parentNode,tokenPath[-1:][0])
-                    if (node != None):
-                        node.count+=1
-                        self.writeNode(node)
-                    else:
-                        assert last_sibling.sibling == 0,'sibling index set, something wrong'
-                        self.appendSibling(last_sibling, tokenPath[-1:][0])
+            self.insertOrUpdateTokenFromParentNode(parentNode, tokenPath)
 
 
     def getNode(self, tokenPath):
