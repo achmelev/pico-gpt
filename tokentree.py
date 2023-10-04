@@ -189,15 +189,15 @@ class TokenTree:
         if (parentNode.child == 0):
             if (self.depth+1 == len(tokenPath)):
                 self.depth+=1
-            self.createFirstChild(parentNode, tokenPath[-1:][0])
+            self.createFirstChild(parentNode, tokenPath[-1])
         else:
-            node, last_sibling = self.searchTokenNode(parentNode,tokenPath[-1:][0])
+            node, last_sibling = self.searchTokenNode(parentNode,tokenPath[-1])
             if (node != None):
                 node.count+=1
                 self.writeNode(node)
             else:
                 assert last_sibling.sibling == 0,'sibling index set, something wrong'
-                self.appendSibling(last_sibling, tokenPath[-1:][0])
+                self.appendSibling(last_sibling, tokenPath[-1])
 
     
     def insertOrUpdateTokenFromParentIndex(self, parentIdx, tokenPath):
