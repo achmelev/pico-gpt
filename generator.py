@@ -1,6 +1,6 @@
 from environment import log, device, get_int_config_value, get_float_config_value, workDir
 from tokenizer import Tokenizer
-from model import GPT
+from model import GPT, print_config
 from treemodel import TokenTreeModel
 
 import torch
@@ -34,6 +34,7 @@ class TextGenerator:
         #Model
         if (gpt):
             self.model = GPT()
+            print_config()
         else:
             self.model = TokenTreeModel(get_float_config_value('treemodel_zero_value'))
         self.model_file = workDir+file_prefix+"model_dict.bin"
