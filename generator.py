@@ -117,6 +117,7 @@ class TextGenerator:
         words_counter = 0
         current_word = ""
         prompt_counter = 0
+        token_counter = 0
         while (True):
             # Get next token
             if (prompt_counter < len(self.start_tokens)):
@@ -124,6 +125,7 @@ class TextGenerator:
                 prompt_counter+=1
             else:
                 token = self.generate_token()
+            token_counter+=1
             if token == '<end/>':
                 if len(current_word) >0:
                     if (line_length == 0):
@@ -133,7 +135,8 @@ class TextGenerator:
                 if (words_counter > self.max_words):
                     print("")
                     break
-                print("\n")#Leerzeile
+                if (token_counter >1):#Nicht wenn <end/> der allererste Token ist.
+                    print("\n")#Leerzeile
                 line_length = 0
                 current_word = ""
             elif token[0] == '#':
