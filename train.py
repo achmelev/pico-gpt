@@ -129,24 +129,46 @@ class Trainer:
              self.state['min_val_loss'] = val_loss/self.eval_iters
          log.info("Initial validation loss: "+str(self.state['min_val_loss']))
     
-    def validate(self):
+    def validate(self, profile = False):
         train_loss = 0.0
         val_loss = 0.0
         for it in range(self.eval_iters):
-            if (has_timer('validate')):
-                start('validate')
+                
             self.model.eval()
+            if (profile):
+                start('validate_batch')
             train_batch = self.loader.batch()
+            if (profile):
+                stop('validate_batch')
+            if (profile):
+                start('validate_forward')
             logits = self.model(train_batch[0])
+            if (profile):
+                stop('validate_forward')
+            if (profile):
+                start('validate_calc_loss')
             loss = self.calculate_loss(logits, train_batch[1])
             train_loss+=loss.item()
+            if (profile):
+                stop('validate_calc_loss')
+            if (profile):
+                start('validate_batch')
             val_batch = self.loader.batch(train=False)
+            if (profile):
+                stop('validate_batch')
+            if (profile):
+                start('validate_forward')
             logits = self.model(val_batch[0])
+            if (profile):
+                stop('validate_forward')
+            if (profile):
+                start('validate_calc_loss')
             loss = self.calculate_loss(logits, val_batch[1])
             val_loss+=loss.item()
+            if (profile):
+                stop('validate_calc_loss')
             self.model.train()
-            if (has_timer('validate')):
-                stop('validate')
+            
         return train_loss, val_loss
 
 
@@ -166,8 +188,12 @@ class Trainer:
 
         #Timers
         create_timer('loop')
-        create_timer('train')
-        create_timer('validate')
+        create_timer('train_forward')
+        create_timer('train_batch')
+        create_timer('train_backward')
+        create_timer('validate_forward')
+        create_timer('validate_batch')
+        create_timer('validate_calc_loss')
         
 
         #Start message
@@ -182,12 +208,10 @@ class Trainer:
 
         while True:
             start('loop')
-            start('train')
-            if (not has_timer('last_train')):
-                create_timer('last_train')
-            start('last_train')
             #Get next batch
+            start('train_batch')
             train_batch = self.loader.batch()
+            stop('train_batch')
             #Set learning rate
             # determine and set the learning rate for this iteration
             if (self.gpt):
@@ -200,31 +224,37 @@ class Trainer:
             self.optimizer.zero_grad(set_to_none=True)
             # forward + backward + optimize
             calc_start_time = time()
+            start('train_forward')
             logits = self.model(train_batch[0])
+            stop('train_forward')
+            start('train_backward')
             loss = self.calculate_loss(logits, train_batch[1])
             loss.backward()
             self.optimizer.step()
+            stop('train_backward')
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
             self.state['lr_counter'] = self.state['lr_counter']+1
-            stop('train')
-            stop('last_train')
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
-                train_loss, val_loss = self.validate()
+                train_loss, val_loss = self.validate(profile=True)
                 stop('loop')
                 log.info("######################################Epoch Report#######################################################")
                 current_val_loss = val_loss/self.eval_iters
                 log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
                 log.info('Has been running since '+get_time_sum_fmt('loop'))
-                log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration ("+str(get_time_avg('last_train'))+" sec in the last epoch)")
-                log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
-                
+                log.info("Batch training time "+get_time_sum_fmt('train_batch')+", "+str(get_time_avg('train_batch'))+" sec per iteration")
+                log.info("Forward training time "+get_time_sum_fmt('train_forward')+", "+str(get_time_avg('train_forward'))+" sec per iteration")
+                log.info("Backward training time "+get_time_sum_fmt('train_backward')+", "+str(get_time_avg('train_backward'))+" sec per iteration")
+                log.info("Batch validation time "+get_time_sum_fmt('validate_batch')+", "+str(get_time_avg('validate_batch'))+" sec per iteration")
+                log.info("Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
+                log.info("Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
+
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
@@ -234,7 +264,6 @@ class Trainer:
                     log.info("No improvement to best validation loss "+str(self.state['min_val_loss'])+" since "+str(min_val_loss_counter)+" epochs")
                 log.info("###############################################################################################################")
                 running_loss = 0.0
-                delete_timer('last_train')
                 if (get_time_sum('loop')>self.minutes_to_train*60.0):
                     log.info("Time is up, stopping training")
                     break

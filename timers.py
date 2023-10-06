@@ -1,7 +1,8 @@
-from time import time, strftime, gmtime
+from time import time
+from datetime import datetime, timezone
 
 timers = {}
-format_string = "%H:%M:%S"
+format_string = "%H:%M:%S.%f"
 
 def create_timer(name):
     global timers
@@ -38,7 +39,8 @@ def stop(name):
 
 def fmt_time(seconds):
     global format_string
-    return strftime(format_string, gmtime(seconds))
+    t = datetime.fromtimestamp(seconds, timezone.utc)
+    return t.strftime(format_string)
 
 
 def get_time_sum(name):
