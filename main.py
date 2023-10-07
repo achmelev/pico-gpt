@@ -12,8 +12,6 @@ from model import GPT, print_config
 from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
-from tokentreezer import TokenTreezer
-from treereader import TokenTreeReader
 
 command = argv[2]
 args = None
@@ -40,15 +38,7 @@ def do_generate(args):
         prompt = ""
     else:
         prompt = args[0]
-    
-    gpt = True
-    if (prompt == 'tree'): #Tree and empty tree
-        prompt = ""
-        gpt = False
-    elif (args != None and len(args)>1):
-        gpt = args[1] != 'tree'
-
-    generator = TextGenerator(prompt = prompt, gpt=gpt)
+    generator = TextGenerator(prompt = prompt)
     generator.generate_console()
        
 
@@ -70,16 +60,7 @@ def do_train(args):
         log.error("Wrong number of arguments for command train")
     else:
         minutes_to_train = int(args[0])
-        if (len(args)>1):
-            model = args[1]
-            if (model=='tree'):
-                log.info("Training the tree model")
-                trainer = Trainer(minutes_to_train, gpt=False)
-            else:
-                log.info("Training the gpt model")
-                trainer = Trainer(minutes_to_train, gpt=True)
-        else:
-            trainer = Trainer(minutes_to_train)
+        trainer = Trainer(minutes_to_train)
         trainer.run()
 
 def do_download(args):
@@ -96,18 +77,6 @@ def do_config(args):
     print_config()
     log.info("The model has "+str(gpt.get_num_params())+" parameters")
     log.info("################################################################################")
-
-def do_token_tree(args):
-    if (args == None):
-        log.error("Wrong number of arguments for command tokentree")
-    else:
-        if (args[0] != 'stats'):
-            depth = int(args[0])
-            treezer = TokenTreezer()
-            treezer.write(depth)
-        else:
-            reader = TokenTreeReader()
-            reader.print_stats()
         
 
 
@@ -127,8 +96,6 @@ elif (command == 'download'):
     do_download(args)
 elif (command == 'config'):
     do_config(args)
-elif (command == 'tokentree'):
-    do_token_tree(args)
 
 
 

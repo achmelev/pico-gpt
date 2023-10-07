@@ -5,15 +5,12 @@ from torch import stack, from_numpy, randint
 
 class DataLoader:
 
-    def __init__(self,block_size = None):
+    def __init__(self):
         assert isfile(workDir+'train.bin'), 'Missing train data file'
         assert isfile(workDir+'val.bin'), 'Missing validation data file'
         self.train_data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
         self.val_data = memmap(workDir+'val.bin', dtype=uint16, mode='r')
-        if (block_size == None):
-            self.block_size = get_int_config_value("block_size")
-        else:
-            self.block_size = block_size
+        self.block_size = get_int_config_value("block_size")
         self.batch_size = get_int_config_value("batch_size")
     
     def batch(self, train = True):

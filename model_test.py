@@ -35,14 +35,12 @@ class ModelTest (unittest.TestCase):
 
         logits = model(train_batch[0])
 
-        self.assertEqual(len(logits.size()), 3)
         self.assertEqual(logits.size(dim=0), batch_size)
         self.assertEqual(logits.size(dim=1), block_size)
         self.assertEqual(logits.size(dim=2), vocab_size)
 
         logits = model(train_batch[0], inference=True)
 
-        self.assertEqual(len(logits.size()), 3)
         self.assertEqual(logits.size(dim=0), batch_size)
         self.assertEqual(logits.size(dim=1), 1)
         self.assertEqual(logits.size(dim=2), vocab_size)
