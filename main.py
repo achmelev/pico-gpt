@@ -12,6 +12,7 @@ from model import GPT, print_config
 from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
+from profile import profile_run
 
 command = argv[2]
 args = None
@@ -77,9 +78,15 @@ def do_config(args):
     print_config()
     log.info("The model has "+str(gpt.get_num_params())+" parameters")
     log.info("################################################################################")
+
+def do_profile(args):
+    if (args == None or len(args) < 2):
+        log.error("Wrong number of arguments for command download")
+    else:
+        name = args[0]
+        iterations = int(args[1]) 
+        profile_run(name, iterations)
         
-
-
 if (command == 'vocab'):
     do_vocab(args)
 elif (command == 'tokenize'):
@@ -96,6 +103,10 @@ elif (command == 'download'):
     do_download(args)
 elif (command == 'config'):
     do_config(args)
+elif (command == 'profile'):
+    do_profile(args)
+else:
+    raise Exception('Unknown command: '+command)
 
 
 
