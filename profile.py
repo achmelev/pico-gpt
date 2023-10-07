@@ -50,7 +50,7 @@ class ProfileCase:
         if (device == 'cpu'):
             self.profiler_activities = [ProfilerActivity.CPU]
         else:
-            self.profiler_activities = [ProfilerActivity.CPU, ProfilerActivity.GPU]
+            self.profiler_activities = [ProfilerActivity.CPU, ProfilerActivity.CUDA]
     
     def calculate_loss(self, logits, targets):
         return F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
