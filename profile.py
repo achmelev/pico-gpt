@@ -8,6 +8,14 @@ from torch.nn import functional as F
 
 from torch.profiler import profile, record_function, ProfilerActivity
 
+groupByInputShape = get_bool_config_value('profile_group_by_input_shape')
+if (device == 'cpu'):
+    totalSortKey = "cpu_time_total" 
+    selfSortKey = "self_cpu_time_total"
+else:
+    totalSortKey = "cuda_time_total" 
+    selfSortKey = "self_cuda_time_total"
+
 class ProfileCase:
 
     def __init__(self):
@@ -49,8 +57,12 @@ class ProfileCase:
 
         if (device == 'cpu'):
             self.profiler_activities = [ProfilerActivity.CPU]
+            self.totalSortKey = "cpu_time_total" 
+            self.selfSortKey = "cpu_time_self"
         else:
             self.profiler_activities = [ProfilerActivity.CPU, ProfilerActivity.CUDA]
+            self.totalSortKey = "cuda_time_total" 
+            self.selfSortKey = "cuda_time_self"
         
    
     
@@ -94,8 +106,14 @@ class BackwardProfileCase(ProfileCase):
 
 
 
-def profile_report(prof):
-    print(prof.key_averages().table())
+def profile_report(prof, ):
+    result = prof.key_averages()
+    print("############################Sorted by Self time#####################################")
+    print(prof.key_averages(group_by_input_shape = groupByInputShape).table(sort_by=selfSortKey))
+    print("#####################################################################################")
+    print("############################Sorted by Total time#####################################")
+    print(prof.key_averages(group_by_input_shape = groupByInputShape).table(sort_by=totalSortKey))
+    print("#####################################################################################")
 
 def profile_run(name, iterations):
     profileCase = None
