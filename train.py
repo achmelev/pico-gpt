@@ -23,7 +23,6 @@ class Trainer:
         self.warmup_iters = get_int_config_value('warmup_iters')
         self.lr_decay_iters = get_int_config_value('lr_decay_iters')
         self.eval_interval = get_int_config_value('eval_interval')
-        self.grad_clip = get_float_config_value('grad_clip')
         self.eval_iters = get_int_config_value('eval_iters')
         self.log_interval = get_int_config_value('log_interval')
         self.max_epochs_without_improvement = get_int_config_value('max_epochs_without_improvement')
@@ -228,7 +227,6 @@ class Trainer:
                 current_val_loss = val_loss/self.eval_iters
                 log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
                 log.info('Has been running since '+get_time_sum_fmt('loop'))
-<<<<<<< HEAD
                 log.info("Batch training time "+get_time_sum_fmt('train_batch')+", "+str(get_time_avg('train_batch'))+" sec per iteration")
                 log.info("Forward training time "+get_time_sum_fmt('train_forward')+", "+str(get_time_avg('train_forward'))+" sec per iteration")
                 log.info("Calc loss training time "+get_time_sum_fmt('train_calc_loss')+", "+str(get_time_avg('train_calc_loss'))+" sec per iteration")
@@ -238,10 +236,6 @@ class Trainer:
                 log.info("Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
                 log.info("Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
 
-=======
-                log.info('Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration ("+str(get_time_avg('last_train'))+" sec in the last epoch)")
-                log.info('Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
->>>>>>> parent of deb1123... tree model very first version
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
