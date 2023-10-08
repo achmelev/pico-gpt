@@ -129,13 +129,13 @@ class BackwardProfileCase(ProfileCase):
 class ForwardDPAttentionProfileCase(ProfileCase):
 
     def run(self, iterations = 1):
-        log.info('Running on: '+device)
-        q = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
-        q.to(device)
-        k = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
-        k.to(device)
-        v = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
-        v.to(device)
+        q = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),1.0, requires_grad = True, device = device)
+        k = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),2.0, requires_grad = True, device = device)
+        v = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),3.0, requires_grad = True, device = device)
+        
+        log.debug('q ist on '+str(q.get_device()))
+        log.debug('k ist on '+str(k.get_device()))
+        log.debug('v ist on '+str(v.get_device()))
 
 
         with profile(activities=self.profiler_activities, record_shapes=True) as prof:
@@ -146,15 +146,16 @@ class ForwardDPAttentionProfileCase(ProfileCase):
 class BackwardDPAttentionProfileCase(ProfileCase):
 
     def run(self, iterations = 1):
-        q = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),1.0, requires_grad = True)
-        q.to(device)
-        k = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),2.0, requires_grad = True)
-        k.to(device)
-        v = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),3.0, requires_grad = True)
-        v.to(device)
+        q = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),1.0, requires_grad = True, device = device)
+        k = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),2.0, requires_grad = True, device = device)
+        v = torch.full((self.batch_size, 1, self.block_size, self.embedding_size),3.0, requires_grad = True, device = device)
+        
+        log.debug('q ist on '+str(q.get_device()))
+        log.debug('k ist on '+str(k.get_device()))
+        log.debug('v ist on '+str(v.get_device()))
 
-        grad = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
-        grad.to(device)
+        grad = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True, device = device)
+        log.debug('grad ist on '+str(grad.get_device()))
 
         y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0, is_causal=True)
         y.retain_grad()
