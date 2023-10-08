@@ -23,6 +23,8 @@ class ProfileCase:
 
     def __init__(self):
 
+        log.info("Device = "+device)
+
         #Params
         self.weight_decay = get_float_config_value('weight_decay')
         self.learning_rate = get_float_config_value('learning_rate')
@@ -62,10 +64,12 @@ class ProfileCase:
         self.optimizer = torch.optim.AdamW(optim_groups, lr=self.learning_rate, betas=self.betas, **extra_args)
 
         if (device == 'cpu'):
+            log.info('Profiling CPU')
             self.profiler_activities = [ProfilerActivity.CPU]
             self.totalSortKey = "cpu_time_total" 
             self.selfSortKey = "cpu_time_self"
         else:
+            log.info('Profiling CPU und CUDA')
             self.profiler_activities = [ProfilerActivity.CPU, ProfilerActivity.CUDA]
             self.totalSortKey = "cuda_time_total" 
             self.selfSortKey = "cuda_time_self"
