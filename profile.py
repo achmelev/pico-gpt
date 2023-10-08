@@ -129,6 +129,7 @@ class BackwardProfileCase(ProfileCase):
 class ForwardDPAttentionProfileCase(ProfileCase):
 
     def run(self, iterations = 1):
+        log.info('Running on: '+device)
         q = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
         q.to(device)
         k = torch.randn((self.batch_size, 1, self.block_size, self.embedding_size), requires_grad = True)
