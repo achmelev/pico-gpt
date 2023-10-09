@@ -28,6 +28,7 @@ class TextGenerator:
         
         #Model
         self.model = GPT()
+        self.to(device)
         print_config()
         self.model_file = workDir+"model_dict.bin"
         if (isfile(self.model_file)):
@@ -45,7 +46,6 @@ class TextGenerator:
             start_ids = [startToken]
         
         self.ctx = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
-        self.ctx.to(device)
 
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
