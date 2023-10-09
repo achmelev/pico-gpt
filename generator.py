@@ -28,7 +28,7 @@ class TextGenerator:
         
         #Model
         self.model = GPT()
-        self.to(device)
+        self.model.to(device)
         print_config()
         self.model_file = workDir+"model_dict.bin"
         if (isfile(self.model_file)):
