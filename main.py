@@ -12,7 +12,7 @@ from model import GPT, print_config
 from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
-from profile import profile_run
+from profiler import profile_run
 
 command = argv[2]
 args = None
