@@ -22,6 +22,7 @@ class Trainer:
         self.decay_lr = get_bool_config_value('decay_lr')
         self.warmup_iters = get_int_config_value('warmup_iters')
         self.lr_decay_iters = get_int_config_value('lr_decay_iters')
+        self.lr_decay_iters_set = False
         self.eval_interval = get_int_config_value('eval_interval')
         self.eval_iters = get_int_config_value('eval_iters')
         self.log_interval = get_int_config_value('log_interval')
@@ -29,9 +30,11 @@ class Trainer:
 
         #State
         self.state_file = workDir+"state_dict.bin"
-        self.state = {'lr_counter':0, 'min_val_loss': float("inf")}
-        self.resuming = False
+        self.state = {'min_val_loss': float("inf")}
         
+        self.lr_counter = 0
+        self.resuming = False
+
         #Model
         self.model_file = workDir+"model_dict.bin"
         self.model = GPT()
@@ -69,7 +72,21 @@ class Trainer:
         # 1) linear warmup for warmup_iters steps
         if it < self.warmup_iters:
             return self.learning_rate * it / self.warmup_iters
-        # 2) if it > lr_decay_iters, return min learning rate
+
+        
+        #1.1) If self.lr_decay_iters = calculate es from rest time an avg time per iteration
+        if (not self.lr_decay_iters_set):
+            log.info('Learning rate warm up done!')
+            if (self.lr_decay_iters == 0):
+                rest_time = self.minutes_to_train*60 - get_time_sum('lr_decay')
+                self.lr_decay_iters = int(rest_time/get_time_avg('lr_decay'))
+                if (rest_time <= 0):
+                    self.lr_decay_iters = 1
+            log.info('Got learning rate to decay for '+str(self.lr_decay_iters)+" iterations")
+        self.lr_decay_iters_set = True
+
+        
+         # 2) if it > lr_decay_iters, return min learning rate
         if it > self.lr_decay_iters:
             return self.min_learning_rate
         # 3) in between, use cosine decay down to min learning rate
@@ -174,6 +191,8 @@ class Trainer:
         create_timer('validate_forward')
         create_timer('validate_batch')
         create_timer('validate_calc_loss')
+        if (self.lr_decay_iters == 0):
+            create_timer('lr_decay')
         
 
         #Start message
@@ -194,9 +213,11 @@ class Trainer:
             start('train')
             #Set learning rate
             # determine and set the learning rate for this iteration
-            lr = self.get_lr(self.state['lr_counter']+1) if self.decay_lr else self.learning_rate
+            lr = self.get_lr(self.lr_counter+1) if self.decay_lr else self.learning_rate
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = lr
+            if (has_timer('lr_decay')):
+                start('lr_decay')
             # zero the parameter gradients
             self.optimizer.zero_grad(set_to_none=True)
             # forward + backward + optimize
@@ -218,7 +239,7 @@ class Trainer:
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
-            self.state['lr_counter'] = self.state['lr_counter']+1
+            self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
 
@@ -261,6 +282,8 @@ class Trainer:
                     break
             else:
                 stop('loop')
+            if has_timer('lr_decay'):
+                stop('lr_decay')
             
         log.info("######################################Validation Report#######################################################")
         log.info("Training done in "+get_time_sum_fmt('loop')+", got best validation loss of "+str(self.state['min_val_loss']))
