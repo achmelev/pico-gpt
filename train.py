@@ -164,11 +164,13 @@ class Trainer:
 
         #Timers
         create_timer('loop')
+        create_timer('train')
         create_timer('train_forward')
         create_timer('train_batch')
         create_timer('train_backward')
         create_timer('train_calc_loss')
         create_timer('train_step')
+        create_timer('validate')
         create_timer('validate_forward')
         create_timer('validate_batch')
         create_timer('validate_calc_loss')
@@ -189,6 +191,7 @@ class Trainer:
             start('train_batch')
             train_batch = self.loader.batch()
             stop('train_batch')
+            start('train')
             #Set learning rate
             # determine and set the learning rate for this iteration
             lr = self.get_lr(self.state['lr_counter']+1) if self.decay_lr else self.learning_rate
@@ -210,6 +213,7 @@ class Trainer:
             start('train_step')
             self.optimizer.step()
             stop('train_step')
+            stop('train')
            
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
@@ -221,20 +225,24 @@ class Trainer:
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
+                start('validate')
                 train_loss, val_loss = self.validate(profile=True)
+                stop('validate')
                 stop('loop')
                 log.info("######################################Epoch Report#######################################################")
                 current_val_loss = val_loss/self.eval_iters
                 log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
-                log.info('Has been running since '+get_time_sum_fmt('loop'))
-                log.info("Batch training time "+get_time_sum_fmt('train_batch')+", "+str(get_time_avg('train_batch'))+" sec per iteration")
-                log.info("Forward training time "+get_time_sum_fmt('train_forward')+", "+str(get_time_avg('train_forward'))+" sec per iteration")
-                log.info("Calc loss training time "+get_time_sum_fmt('train_calc_loss')+", "+str(get_time_avg('train_calc_loss'))+" sec per iteration")
-                log.info("Backward training time "+get_time_sum_fmt('train_backward')+", "+str(get_time_avg('train_backward'))+" sec per iteration")
-                log.info("Step training time "+get_time_sum_fmt('train_step')+", "+str(get_time_avg('train_step'))+" sec per iteration")
-                log.info("Batch validation time "+get_time_sum_fmt('validate_batch')+", "+str(get_time_avg('validate_batch'))+" sec per iteration")
-                log.info("Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
-                log.info("Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
+                log.info('Running '+get_time_sum_fmt('loop')+", "+str(get_time_avg('loop'))+" sec per iteration")
+                log.info('-Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration")
+                log.info("--Batch training time "+get_time_sum_fmt('train_batch')+", "+str(get_time_avg('train_batch'))+" sec per iteration")
+                log.info("--Forward training time "+get_time_sum_fmt('train_forward')+", "+str(get_time_avg('train_forward'))+" sec per iteration")
+                log.info("--Calc loss training time "+get_time_sum_fmt('train_calc_loss')+", "+str(get_time_avg('train_calc_loss'))+" sec per iteration")
+                log.info("--Backward training time "+get_time_sum_fmt('train_backward')+", "+str(get_time_avg('train_backward'))+" sec per iteration")
+                log.info("--Step training time "+get_time_sum_fmt('train_step')+", "+str(get_time_avg('train_step'))+" sec per iteration")
+                log.info('-Validation time '+get_time_sum_fmt('validate')+", "+str(get_time_avg('validate'))+" sec per iteration")
+                log.info("--Batch validation time "+get_time_sum_fmt('validate_batch')+", "+str(get_time_avg('validate_batch'))+" sec per iteration")
+                log.info("--Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
+                log.info("--Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
 
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
