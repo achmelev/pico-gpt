@@ -25,6 +25,7 @@ class GPTConfig:
     n_embd: int
     dropout: float
     bias: bool
+    mlp_size_factor: int
     
 
 _config = None
@@ -40,13 +41,14 @@ def get_config():
         result.n_embd = get_int_config_value('embedding_size')
         result.dropout = get_float_config_value('dropout')
         result.bias = get_bool_config_value('bias')
+        result.mlp_size_factor = get_int_config_value('mlp_size_factor')
         _config = result
     return _config
 
 def print_config():
     global _config
     get_config()
-    log.info('Model config: block size = '+str(_config.block_size)+', number of layers = '+str(_config.n_layer)+', number of heads = '+str(_config.n_head)+', embedding size = '+str(_config.n_embd)+', dropout = '+str(_config.dropout)+', bias = '+str(_config.bias)) 
+    log.info('Model config: block size = '+str(_config.block_size)+', number of layers = '+str(_config.n_layer)+', number of heads = '+str(_config.n_head)+', embedding size = '+str(_config.n_embd)+', mlp size factor = '+str(_config.mlp_size_factor)+', dropout = '+str(_config.dropout)+', bias = '+str(_config.bias)) 
 
 
 
@@ -117,9 +119,9 @@ class MLP(nn.Module):
     def __init__(self):
         super().__init__()
         config = get_config()
-        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias)
+        self.c_fc    = nn.Linear(config.n_embd, config.mlp_size_factor * config.n_embd, bias=config.bias)
         self.gelu    = nn.GELU()
-        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias)
+        self.c_proj  = nn.Linear(config.mlp_size_factor * config.n_embd, config.n_embd, bias=config.bias)
         self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
