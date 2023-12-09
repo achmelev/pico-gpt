@@ -164,7 +164,7 @@ class Trainer:
             
         return train_loss, val_loss
 
-    def log_cuda_memory_usage():
+    def log_cuda_memory_usage(self):
         if (device == 'cuda'):
             memory_allocated = torch.torch.cuda.memory_allocated(torch.device('cuda:0'))//(1024*1024)
             memory_reserved = torch.torch.cuda.memory_reserved(torch.device('cuda:0'))//(1024*1024)
