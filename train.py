@@ -240,17 +240,21 @@ class Trainer:
             stop('train_step')
             stop('train')
             
-            #Cleaning memory (hopefully)
-             # zero the parameter gradients
-            self.optimizer.zero_grad(set_to_none=True)
-            #Zero train batch
-            train_batch = None
+    
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
             self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
+                self.log_cuda_memory_usage()
+            #Cleaning memory (hopefully)
+             # zero the parameter gradients
+            self.optimizer.zero_grad(set_to_none=True)
+            #Zero train batch
+            train_batch = None
+            if (iter_counter == 1 or iter_counter%self.log_interval == 0):
+                log.info('After Cleaning: ')
                 self.log_cuda_memory_usage()
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
