@@ -253,9 +253,6 @@ class Trainer:
             self.optimizer.zero_grad(set_to_none=True)
             #Zero train batch
             train_batch = None
-            if (iter_counter == 1 or iter_counter%self.log_interval == 0):
-                log.info('After Cleaning: ')
-                self.log_cuda_memory_usage()
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
