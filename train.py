@@ -245,7 +245,8 @@ class Trainer:
             self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
-
+                if (device == 'cuda'):
+                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated//(1024*1024)+" MB"))
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
