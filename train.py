@@ -167,8 +167,9 @@ class Trainer:
     def log_cuda_memory_usage(self):
         if (device == 'cuda'):
             memory_allocated = torch.torch.cuda.memory_allocated(torch.device('cuda:0'))//(1024*1024)
+            max_memory_allocated = torch.torch.cuda.max_memory_allocated(torch.device('cuda:0'))//(1024*1024)
             memory_reserved = torch.torch.cuda.memory_reserved(torch.device('cuda:0'))//(1024*1024)
-            log.info("GPU memory usage: "+str(memory_allocated)+" MB, reserved "+str(memory_reserved))
+            log.info("GPU memory usage: "+str(memory_allocated)+" MB, max allocated = "+str(max_memory_allocated)+" MB, reserved "+str(memory_reserved))
 
     def run(self):
         #Stopping if to train <=0
