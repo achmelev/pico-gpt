@@ -218,8 +218,6 @@ class Trainer:
                 param_group['lr'] = lr
             if (has_timer('lr_decay')):
                 start('lr_decay')
-            # zero the parameter gradients
-            self.optimizer.zero_grad(set_to_none=True)
             # forward + backward + optimize
             calc_start_time = time()
             start('train_forward')
@@ -235,7 +233,12 @@ class Trainer:
             self.optimizer.step()
             stop('train_step')
             stop('train')
-           
+            
+            #Cleaning memory (hopefully)
+             # zero the parameter gradients
+            self.optimizer.zero_grad(set_to_none=True)
+            #Zero train batch
+            train_batch = None
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
@@ -264,7 +267,8 @@ class Trainer:
                 log.info("--Batch validation time "+get_time_sum_fmt('validate_batch')+", "+str(get_time_avg('validate_batch'))+" sec per iteration")
                 log.info("--Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
                 log.info("--Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
-
+                if (device == 'cuda'):
+                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated//(1024*1024)+" MB"))
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
