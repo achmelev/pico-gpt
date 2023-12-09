@@ -164,6 +164,11 @@ class Trainer:
             
         return train_loss, val_loss
 
+    def log_cuda_memory_usage():
+        if (device == 'cuda'):
+            memory_allocated = torch.torch.cuda.memory_allocated(torch.device('cuda:0'))//(1024*1024)
+            memory_reserved = torch.torch.cuda.memory_reserved(torch.device('cuda:0'))//(1024*1024)
+            log.info("GPU memory usage: "+str(memory_allocated)+" MB, reserved "+str(memory_reserved))
 
     def run(self):
         #Stopping if to train <=0
@@ -245,8 +250,7 @@ class Trainer:
             self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
-                if (device == 'cuda'):
-                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated(device)//(1024*1024))+" MB")
+                self.log_cuda_memory_usage()
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
@@ -268,8 +272,7 @@ class Trainer:
                 log.info("--Batch validation time "+get_time_sum_fmt('validate_batch')+", "+str(get_time_avg('validate_batch'))+" sec per iteration")
                 log.info("--Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
                 log.info("--Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
-                if (device == 'cuda'):
-                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated(device)//(1024*1024))+" MB")
+                self.log_cuda_memory_usage()
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
