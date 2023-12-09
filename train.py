@@ -246,7 +246,7 @@ class Trainer:
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
                 if (device == 'cuda'):
-                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated//(1024*1024)+" MB"))
+                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated(device)//(1024*1024)+" MB"))
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
@@ -269,7 +269,7 @@ class Trainer:
                 log.info("--Forward validation time "+get_time_sum_fmt('validate_forward')+", "+str(get_time_avg('validate_forward'))+" sec per iteration")
                 log.info("--Calc loss validation time "+get_time_sum_fmt('validate_calc_loss')+", "+str(get_time_avg('validate_calc_loss'))+" sec per iteration")
                 if (device == 'cuda'):
-                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated//(1024*1024)+" MB"))
+                    log.info("GPU memory usage: "+str(torch.torch.cuda.memory_allocated(device)//(1024*1024)+" MB"))
                 if (current_val_loss < self.state['min_val_loss']):
                     self.state['min_val_loss'] = current_val_loss
                     min_val_loss_counter = 0
