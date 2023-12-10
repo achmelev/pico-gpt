@@ -125,9 +125,8 @@ class Trainer:
     def validate(self, profile = False):
         train_loss = 0.0
         val_loss = 0.0
+        self.model.eval()
         for it in range(self.eval_iters):
-                
-            self.model.eval()
             if (profile):
                 start('validate_batch')
             train_batch = self.loader.batch()
@@ -142,6 +141,7 @@ class Trainer:
                 start('validate_calc_loss')
             loss = self.calculate_loss(logits, train_batch[1])
             train_loss+=loss.item()
+            del train_batch
             if (profile):
                 stop('validate_calc_loss')
             if (profile):
@@ -158,18 +158,19 @@ class Trainer:
                 start('validate_calc_loss')
             loss = self.calculate_loss(logits, val_batch[1])
             val_loss+=loss.item()
+            del val_batch
             if (profile):
                 stop('validate_calc_loss')
-            self.model.train()
-            
+        self.model.train()
+        self.log_cuda_memory_usage('after validation')  
         return train_loss, val_loss
 
-    def log_cuda_memory_usage(self):
+    def log_cuda_memory_usage(self, label):
         if (device == 'cuda'):
             memory_allocated = torch.torch.cuda.memory_allocated(torch.device('cuda:0'))//(1024*1024)
             max_memory_allocated = torch.torch.cuda.max_memory_allocated(torch.device('cuda:0'))//(1024*1024)
             memory_reserved = torch.torch.cuda.memory_reserved(torch.device('cuda:0'))//(1024*1024)
-            log.info("GPU memory usage: "+str(memory_allocated)+" MB, max allocated = "+str(max_memory_allocated)+" MB, reserved "+str(memory_reserved))
+            log.info("GPU memory usage "+label+": " +str(memory_allocated)+" MB, max allocated = "+str(max_memory_allocated)+" MB, reserved "+str(memory_reserved))
 
     def run(self):
         #Stopping if to train <=0
@@ -247,17 +248,17 @@ class Trainer:
             self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
                 log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
-                self.log_cuda_memory_usage()
+                self.log_cuda_memory_usage('')
             #Cleaning memory (hopefully)
              # zero the parameter gradients
             self.optimizer.zero_grad(set_to_none=True)
-            #Zero train batch
-            train_batch = None
+            #Delete train batch
+            del train_batch
             if iter_counter%self.eval_interval == 0:
                 epochCounter+=1
                 #Validation
                 start('validate')
-                train_loss, val_loss = self.validate(profile=True)
+                train_loss, val_loss = self.validate()
                 stop('validate')
                 stop('loop')
                 log.info("######################################Epoch Report#######################################################")
