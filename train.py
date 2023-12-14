@@ -39,6 +39,10 @@ class Trainer:
         self.model_file = workDir+"model_dict.bin"
         self.model = GPT()
         self.model.to(device)
+        if (get_bool_config_value('compile')):
+            log.info("Compiling model...")
+            self.model = torch.compile(self.model)
+            log.info("Done!")
 
         #Data Loader
         self.loader = DataLoader()
