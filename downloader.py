@@ -10,9 +10,12 @@ class EnvDownloader:
     def __init__(self, id):
         self.id = id
     
-    def download(self):
-        downloadFile = workDir+"temp.tgz"
-        log.info("Downloading environment from Google Drive as tgz file with id "+self.id+" to "+downloadFile)
+    def download(self, tofile = None):
+        if (tofile == None):
+            downloadFile = workDir+"temp.tgz"
+        else:
+            downloadFile = workDir+tofile
+        log.info("Downloading file from Google Drive with id "+self.id+" to "+downloadFile)
         url = "https://drive.usercontent.google.com/download"
         payload = {'id': self.id, 'export': 'download', 'authuser':'0','confirm':'t'}
         download = open(downloadFile,"wb")
@@ -27,11 +30,12 @@ class EnvDownloader:
                 log.info("Got "+str(bytes_counter)+" bytes")
             download.close()
             log.info("Done")
-            tar = tarfile.open(downloadFile)
-            log.info("Extracting environment files...")
-            tar.extractall(path=workDir)
-            log.info("Done")
-            remove(downloadFile)
+            if (tofile == None):
+                tar = tarfile.open(downloadFile)
+                log.info("Extracting environment files...")
+                tar.extractall(path=workDir)
+                log.info("Done")
+                remove(downloadFile)
         else:
             log.error("Couldn't download, statusCode = "+str(response.status_code)+", reason = "+response.reason)
 

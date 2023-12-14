@@ -70,7 +70,10 @@ def do_download(args):
     else:
         id = args[0]
         downloader = EnvDownloader(id)
-        downloader.download()
+        if (len(args) == 1):
+            downloader.download()
+        else:
+            downloader.download(args[1])
 
 def do_config(args):
     gpt = GPT()
