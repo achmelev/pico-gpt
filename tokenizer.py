@@ -17,6 +17,10 @@ class Tokenizer:
       wordPatternStr = r'\w[\w\’]*|['+self.punctuation+']'
       self.word_pattern = compile(wordPatternStr)
       self.vocab_prepared = False
+
+      self.word_map = {}
+
+
    
    def setWordPatternFromAlphabet(self):
       wordPatternStr = '['+self.alphabet+']+|['+self.punctuation+']'
@@ -257,23 +261,35 @@ class Tokenizer:
       self.setWordPatternFromAlphabet()
       self.prepare_vocab_map()
       self.vocab_prepared = True
+
+
+   def merge_split(self, split, merge):
+      i = 0
+      while i < len(split) - 1:
+            if split[i] == merge[0] and split[i + 1] == merge[1]:
+               split = split[:i] + [merge[2]] + split[i + 2 :]
+            else:
+               i += 1
+      return split
    
    def tokenize_text(self, text):
       assert self.vocab_prepared, 'no vocab'
+
       words = self.wordTokenizeText(text)
       if not self.areWordsSuitable(words):
          return None
-      splits = [[l for l in word] for word in words]
-      for merge in self.merges:
-         for idx, split in enumerate(splits):
-            i = 0
-            while i < len(split) - 1:
-                if split[i] == merge[0] and split[i + 1] == merge[1]:
-                    split = split[:i] + [merge[2]] + split[i + 2 :]
-                else:
-                    i += 1
-            splits[idx] = split
-
+      splits = []
+      for word in words:
+         if (word in self.word_map):
+            splits.append(self.word_map[word])
+         else:
+            split = [l for l in word]
+            merge_index = 0
+            while (len(split)>0 and merge_index < len(self.merges)):
+               split = self.merge_split(split, self.merges[merge_index])
+               merge_index+=1
+            splits.append(split)
+            self.word_map[word] = split
       return sum(splits, [])
    
    def tokens_to_text(self, tokens):
