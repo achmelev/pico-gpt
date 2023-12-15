@@ -281,11 +281,12 @@ class Tokenizer:
       splits = []
       for word in words:
          if (word in self.word_map):
+            #log.debug('Got word '+word)
             splits.append(self.word_map[word])
          else:
             split = [l for l in word]
             merge_index = 0
-            while (len(split)>0 and merge_index < len(self.merges)):
+            while (len(split)>1 and merge_index < len(self.merges)):
                split = self.merge_split(split, self.merges[merge_index])
                merge_index+=1
             splits.append(split)
