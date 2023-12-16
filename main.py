@@ -14,6 +14,7 @@ from train import Trainer
 from downloader import EnvDownloader
 from profiler import profile_run
 from tokenstats import TokenStats
+from dispress import DisPressGenerator
 
 command = argv[2]
 args = None
@@ -98,6 +99,13 @@ def do_tokenstats(args):
         max_tokens = int(args[0])
     stats.generate(max_tokens)
     stats.print()
+
+def do_dispress(args):
+    if (args == None or len(args) < 2):
+        log.error("Wrong number of arguments for command tokenize")
+    else:
+        generator = DisPressGenerator(int(args[0]), int(args[1]))
+        generator.generate()
         
 if (command == 'vocab'):
     do_vocab(args)
@@ -119,6 +127,8 @@ elif (command == 'profile'):
     do_profile(args)
 elif (command == 'tokenstats'):
     do_tokenstats(args)
+elif (command == 'dispress'):
+    do_dispress(args)
 else:
     raise Exception('Unknown command: '+command)
 

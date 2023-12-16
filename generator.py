@@ -90,6 +90,7 @@ class TextGenerator:
         return self.tokenizer.vocab[idx_next]
     
     def generate_console(self):
+        log.info("Generating...")
         print("#####################################################")
         token = None
         line_length = 0
@@ -135,6 +136,7 @@ class TextGenerator:
             else:
                 current_word = current_word+token
         print("#####################################################")
+        log.info("Done! Generated "+str(words_counter)+" words, "+str(token_counter)+" tokens")
 
 
 
