@@ -13,6 +13,7 @@ from generator import TextGenerator
 from train import Trainer
 from downloader import EnvDownloader
 from profiler import profile_run
+from tokenstats import TokenStats
 
 command = argv[2]
 args = None
@@ -89,6 +90,14 @@ def do_profile(args):
         name = args[0]
         iterations = int(args[1]) 
         profile_run(name, iterations)
+
+def do_tokenstats(args):
+    stats = TokenStats()
+    max_tokens = -1
+    if (args != None):
+        max_tokens = int(args[0])
+    stats.generate(max_tokens)
+    stats.print()
         
 if (command == 'vocab'):
     do_vocab(args)
@@ -108,6 +117,8 @@ elif (command == 'config'):
     do_config(args)
 elif (command == 'profile'):
     do_profile(args)
+elif (command == 'tokenstats'):
+    do_tokenstats(args)
 else:
     raise Exception('Unknown command: '+command)
 
