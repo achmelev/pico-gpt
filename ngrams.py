@@ -43,7 +43,6 @@ class Ngrams:
         cur.execute('PRAGMA locking_mode = EXCLUSIVE')
         cur.execute('PRAGMA temp_store = MEMORY')
 
-        cur.execute('BEGIN TRANSACTION')
         for idx in range(len(self.train_data)-self.ngram_size):
             chunk = self.train_data[idx:idx+self.ngram_size]
             values.append([chunk.tobytes()])
@@ -58,7 +57,6 @@ class Ngrams:
                     cur.executemany('INSERT INTO start_pos VALUES (?,?)',start_pos_values)
                     start_pos_values = []
                 log.debug('Written '+str(idx+1)+" ngrams")
-        cur.execute('END TRANSACTION')
         cur.close()
         log.info("Done")
     
