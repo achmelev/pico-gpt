@@ -7,6 +7,8 @@ class Ngrams:
     def __init__(self, readonly = True):
         self.ngram_size = get_int_config_value('ngram_size')
         self.commit_interval = get_int_config_value('ngram_commit_interval')
+        self.insert_interval = get_int_config_value('ngram_insert_interval')
+
         self.readonly = readonly
         if readonly:
             self.active = isfile(workDir+"ngrams.db")
@@ -32,14 +34,21 @@ class Ngrams:
         log.info("Generating ngrams db...")
         cur = self.connection.cursor()
         start_pos_idx = 0
+        values = []
+        start_pos_values = []
         for idx in range(len(self.train_data)-self.ngram_size):
             chunk = self.train_data[idx:idx+self.ngram_size]
-            values = [chunk.tobytes(),idx]
-            cur.execute('INSERT INTO ngrams VALUES (?,?)',values)
+            values.append([chunk.tobytes(),idx])
             if (chunk[0] == start_token):
-                values = [start_pos_idx, idx]
-                cur.execute('INSERT INTO start_pos VALUES (?,?)',values)
+                start_pos_values.append([start_pos_idx, idx])
                 start_pos_idx+=1
+            if ((idx+1)%self.commit_interval == 0) or idx == len(self.train_data)-self.ngram_size-1:#last
+                if (len(values) > 0):
+                    cur.executemany('INSERT INTO ngrams VALUES (?,?)',values)
+                    values = []
+                if (len(start_pos_values) > 0):
+                    cur.executemany('INSERT INTO start_pos VALUES (?,?)',start_pos_values)
+                    start_pos_values = []
             if (idx+1)%self.commit_interval == 0:
                 log.debug('Written '+str(idx+1)+" ngrams")
                 self.connection.commit()

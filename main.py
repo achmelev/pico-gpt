@@ -14,6 +14,7 @@ from train import Trainer
 from downloader import EnvDownloader
 from profiler import profile_run
 from tokenstats import TokenStats
+from ngrams import Ngrams
 from dispress import DisPressGenerator
 
 command = argv[2]
@@ -100,6 +101,14 @@ def do_tokenstats(args):
     stats.generate(max_tokens)
     stats.print()
 
+def do_ngrams(args):
+    tokenizer = Tokenizer()
+    tokenizer.load_vocab()
+    ngrams = Ngrams(readonly=False)
+    ngrams.initdb()
+    ngrams.generate(tokenizer.vocab_map['<end/>'])
+    ngrams.close()
+
 def do_dispress(args):
     if (args == None or len(args) < 2):
         log.error("Wrong number of arguments for command tokenize")
@@ -127,6 +136,8 @@ elif (command == 'profile'):
     do_profile(args)
 elif (command == 'tokenstats'):
     do_tokenstats(args)
+elif (command == 'ngrams'):
+    do_ngrams(args)
 elif (command == 'dispress'):
     do_dispress(args)
 else:
