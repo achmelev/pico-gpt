@@ -26,7 +26,7 @@ class Ngrams:
         assert not self.initialized, 'already initialized'
 
         cur = self.connection.cursor()
-        cur.execute('CREATE TABLE ngrams(ngram BLOB, idx INTEGER)')
+        cur.execute('CREATE TABLE ngrams(ngram BLOB)')
         cur.execute('CREATE INDEX ngrams_idx on ngrams(ngram)')
         cur.execute('CREATE TABLE start_pos(idx INTEGER, pos INTEGER, PRIMARY KEY(idx))')
         cur.close()
@@ -46,13 +46,13 @@ class Ngrams:
         cur.execute('BEGIN TRANSACTION')
         for idx in range(len(self.train_data)-self.ngram_size):
             chunk = self.train_data[idx:idx+self.ngram_size]
-            values.append([chunk.tobytes(),idx])
+            values.append([chunk.tobytes()])
             if (chunk[0] == start_token):
                 start_pos_values.append([start_pos_idx, idx])
                 start_pos_idx+=1
             if ((idx+1)%self.insert_interval == 0) or idx == len(self.train_data)-self.ngram_size-1:#last
                 if (len(values) > 0):
-                    cur.executemany('INSERT INTO ngrams VALUES (?,?)',values)
+                    cur.executemany('INSERT INTO ngrams VALUES (?)',values)
                     values = []
                 if (len(start_pos_values) > 0):
                     cur.executemany('INSERT INTO start_pos VALUES (?,?)',start_pos_values)
