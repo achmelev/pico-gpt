@@ -6,7 +6,6 @@ from numpy import memmap, uint16
 class Ngrams:
     def __init__(self, readonly = True):
         self.ngram_size = get_int_config_value('ngram_size')
-        self.commit_interval = get_int_config_value('ngram_commit_interval')
         self.insert_interval = get_int_config_value('ngram_insert_interval')
 
         self.readonly = readonly
@@ -17,8 +16,10 @@ class Ngrams:
             self.active = True
             self.initialized = False
             self.train_data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
-        if (self.active):
+        if self.active and readonly:
             self.connection = connect(workDir+"ngrams.db")
+        elif self.active and not readonly:
+            self.connection = connect(workDir+"ngrams.db", isolation_level=None)
     
     def initdb(self):
         assert not self.readonly,'opened in read mode'
@@ -36,24 +37,29 @@ class Ngrams:
         start_pos_idx = 0
         values = []
         start_pos_values = []
+        #Pragmas
+        cur.execute('PRAGMA journal_mode = off')
+        cur.execute('PRAGMA synchronous = 0')
+        cur.execute('PRAGMA locking_mode = EXCLUSIVE')
+        cur.execute('PRAGMA temp_store = MEMORY')
+
+        cur.execute('BEGIN TRANSACTION')
         for idx in range(len(self.train_data)-self.ngram_size):
             chunk = self.train_data[idx:idx+self.ngram_size]
             values.append([chunk.tobytes(),idx])
             if (chunk[0] == start_token):
                 start_pos_values.append([start_pos_idx, idx])
                 start_pos_idx+=1
-            if ((idx+1)%self.commit_interval == 0) or idx == len(self.train_data)-self.ngram_size-1:#last
+            if ((idx+1)%self.insert_interval == 0) or idx == len(self.train_data)-self.ngram_size-1:#last
                 if (len(values) > 0):
                     cur.executemany('INSERT INTO ngrams VALUES (?,?)',values)
                     values = []
                 if (len(start_pos_values) > 0):
                     cur.executemany('INSERT INTO start_pos VALUES (?,?)',start_pos_values)
                     start_pos_values = []
-            if (idx+1)%self.commit_interval == 0:
                 log.debug('Written '+str(idx+1)+" ngrams")
-                self.connection.commit()
+        cur.execute('END TRANSACTION')
         cur.close()
-        self.connection.commit()
         log.info("Done")
     
     def count_ngram(self, ngram):
