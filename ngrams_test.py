@@ -24,53 +24,41 @@ class NgramsTest(unittest.TestCase):
         from environment import workDir
         rmtree(workDir)
     
-    def test_initdb(self):
-        from ngrams import Ngrams
-        ngrams = Ngrams(readonly=False)
-        ngrams.initdb()
-        ngrams.close()
+
 
     def test_generate(self):
         self.prepare_train_file()
         from ngrams import Ngrams
         ngrams = Ngrams(readonly=False)
-        ngrams.initdb()
         ngrams.generate()
         ngrams.close()
-    
-    def test_count(self):
+
+    def test_print_stats(self):
         self.prepare_train_file()
         from ngrams import Ngrams
         ngrams = Ngrams(readonly=False)
-        ngrams.initdb()
         ngrams.generate()
         ngrams.close()
-        ngrams = Ngrams()
-        value = ngrams.count_ngram(array([1,2,3,4,5], dtype = uint16))
-        self.assertEqual(3,value)
+        ngrams = Ngrams(readonly=True)
+        ngrams.print_stats()
+        ngrams.close()
     
-    def test_count_start_pos(self):
+    def test_get_nexts(self):
         self.prepare_train_file()
         from ngrams import Ngrams
         ngrams = Ngrams(readonly=False)
-        ngrams.initdb()
         ngrams.generate()
         ngrams.close()
-        ngrams = Ngrams()
-        value = ngrams.count_start_pos()
-        self.assertEqual(3,value)
+        ngrams = Ngrams(readonly=True)
+        values = [3,4,5,6,7]
+        arr =  array(values, dtype = uint16)
+        result = ngrams.get_ngram_nexts(arr)
+        self.assertEqual(3, len(result))
+        for i in result:
+            self.assertEqual(8,i)
+        
     
-    def test_get_start_pos(self):
-        self.prepare_train_file()
-        from ngrams import Ngrams
-        ngrams = Ngrams(readonly=False)
-        ngrams.initdb()
-        ngrams.generate()
-        ngrams.close()
-        ngrams = Ngrams()
-        self.assertEqual(0,ngrams.get_start_pos(0))
-        self.assertEqual(10,ngrams.get_start_pos(1))
-        self.assertEqual(20,ngrams.get_start_pos(2))
+    
         
 if __name__ == '__main__':
     unittest.main()

@@ -105,8 +105,7 @@ def do_ngrams(args):
     tokenizer = Tokenizer()
     tokenizer.load_vocab()
     ngrams = Ngrams(readonly=False)
-    ngrams.initdb()
-    ngrams.generate(tokenizer.vocab_map['<end/>'])
+    ngrams.generate()
     ngrams.close()
 
 def do_dispress(args):
