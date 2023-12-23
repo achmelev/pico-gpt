@@ -87,7 +87,7 @@ class Ngrams:
         nextToken = int(chunk[len(chunk)-1])
         idx = self.getNgramsShardIndex(ngram)
         self.writeCache[idx].append([ngram, nextToken])
-        if (len(self.writeCache) >= self.insert_interval):
+        if (len(self.writeCache[idx]) >= self.insert_interval):
             self.flushWriteCache(idx)
 
     def generate(self):
