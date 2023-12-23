@@ -72,7 +72,6 @@ class Ngrams:
         return idx
 
     def flushWriteCache(self, idx):
-        log.debug('Flushing cache for '+str(idx))
         cur = self.cursor[idx]
         cur.executemany('INSERT INTO ngrams VALUES (?,?)',self.writeCache[idx])
         self.writeCache[idx] = []
