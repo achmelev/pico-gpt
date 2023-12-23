@@ -7,7 +7,7 @@ from progress import Progress
 
 
 class Ngrams:
-    def __init__(self, readonly = True):
+    def __init__(self, readonly = True, index = 0):
         self.ngram_size = get_int_config_value('ngram_size')
         self.insert_interval = get_int_config_value('ngram_insert_interval')
         self.hashtable_size = get_int_config_value('ngram_hastable_size')
@@ -16,8 +16,11 @@ class Ngrams:
         if readonly:
             self.active = isdir(workDir+"ngrams")
         else:
-            assert not isdir(workDir+"ngrams"), workDir+"ngrams"+" already exists!"
+            self.index = index
+            assert self.index >=0 and self.index < self.hashtable_size,"illegal index: "+str(self.index)
+            assert not isfile(workDir+"ngrams/data"+str(self.index)+".db"), workDir+"ngrams/data"+str(self.index)+".db already exists"
             self.train_data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
+            
         if readonly and self.active:
             self.openReadConnections()
     
@@ -28,31 +31,27 @@ class Ngrams:
             self.connection.append(connect(workDir+"ngrams/data"+str(idx)+".db"))
             self.cursor.append(self.connection[idx].cursor())
     
-    def openWriteConnections(self):
+    def openWriteConnection(self):
         assert not self.readonly,'opened in read mode'
-        mkdir(workDir+"ngrams")
-        self.connection = []
-        self.cursor = []
-        for idx in range(self.hashtable_size):
-            self.connection.append(connect(workDir+"ngrams/data"+str(idx)+".db", isolation_level= None))
-            cur = self.connection[idx].cursor()
-            self.cursor.append(cur)
-            #Pragmas (connection and db level)
-            cur.execute('PRAGMA journal_mode = off')
-            cur.execute('PRAGMA synchronous = 0')
-            cur.execute('PRAGMA locking_mode = EXCLUSIVE')
-            cur.execute('PRAGMA temp_store = MEMORY')
+        if not isdir(workDir+"ngrams"):
+            mkdir(workDir+"ngrams")
+        self.connection = connect(workDir+"ngrams/data"+str(self.index)+".db", isolation_level= None)
+        self.cursor = self.connection.cursor()
+        cur = self.cursor
+        cur.execute('PRAGMA journal_mode = off')
+        cur.execute('PRAGMA synchronous = 0')
+        cur.execute('PRAGMA locking_mode = EXCLUSIVE')
+        cur.execute('PRAGMA temp_store = MEMORY')
     
-    def initdbs(self):
+    def initdb(self):
         assert not self.readonly,'opened in read mode'
-        for cur in self.cursor:
-            cur.execute('CREATE TABLE ngrams(ngram BLOB, next INTEGER)')
-            cur.execute('CREATE INDEX ngrams_idx on ngrams(ngram)')
+        cur = self.cursor
+        cur.execute('CREATE TABLE ngrams(ngram BLOB, next INTEGER)')
+        cur.execute('CREATE INDEX ngrams_idx on ngrams(ngram)')
     
     def initWriteCache(self):
         self.writeCache = []
-        for idx in range(self.hashtable_size):
-            self.writeCache.append([])
+        
 
     def fnv1a_64(self, ngram):
         #Constants
@@ -71,28 +70,25 @@ class Ngrams:
         idx = hashValue%self.hashtable_size
         return idx
 
-    def flushWriteCache(self, idx):
-        cur = self.cursor[idx]
-        cur.executemany('INSERT INTO ngrams VALUES (?,?)',self.writeCache[idx])
-        self.writeCache[idx] = []
-
-    def flushWriteCaches(self):
-        for idx in range(len(self.writeCache)):
-            if len(self.writeCache[idx]) >0:
-                self.flushWriteCache(idx)
+    def flushWriteCache(self):
+        if (len(self.writeCache) >0):
+            cur = self.cursor
+            cur.executemany('INSERT INTO ngrams VALUES (?,?)',self.writeCache)
+            self.writeCache = []
 
     def writeChunk(self, chunk):
         ngram = chunk[:-1].tobytes()
         nextToken = int(chunk[len(chunk)-1])
         idx = self.getNgramsShardIndex(ngram)
-        self.writeCache[idx].append([ngram, nextToken])
-        if (len(self.writeCache[idx]) >= self.insert_interval):
-            self.flushWriteCache(idx)
+        if (idx == self.index):
+            self.writeCache.append([ngram, nextToken])
+            if (len(self.writeCache) >= self.insert_interval):
+                self.flushWriteCache()
 
     def generate(self):
         log.info("Generating ngrams db...")
-        self.openWriteConnections()
-        self.initdbs()
+        self.openWriteConnection()
+        self.initdb()
         self.initWriteCache()
 
         chunk_size = self.ngram_size+1
@@ -105,7 +101,7 @@ class Ngrams:
             progress.update(idx)
         log.info("Done")
         log.info("Flushing cache")
-        self.flushWriteCaches()
+        self.flushWriteCache()
         log.info("Done")
     
     def print_stats(self):
@@ -135,10 +131,14 @@ class Ngrams:
         return [x[0] for x in sqlresult]
     
     def close(self):
-        for cur in self.cursor:
-            cur.close()
-        for con in self.connection:
-            con.close()
+        if (self.readonly):
+            for cur in self.cursor:
+                cur.close()
+            for con in self.connection:
+                con.close()
+        else:
+            self.cursor.close()
+            self.connection.close()
         
 
 

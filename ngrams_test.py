@@ -28,17 +28,20 @@ class NgramsTest(unittest.TestCase):
 
     def test_generate(self):
         self.prepare_train_file()
-        from ngrams import Ngrams
-        ngrams = Ngrams(readonly=False)
-        ngrams.generate()
-        ngrams.close()
+        for idx in range(2):
+            from ngrams import Ngrams
+            ngrams = Ngrams(readonly=False, index=idx)
+            ngrams.generate()
+            ngrams.close()
 
     def test_print_stats(self):
         self.prepare_train_file()
         from ngrams import Ngrams
-        ngrams = Ngrams(readonly=False)
-        ngrams.generate()
-        ngrams.close()
+        for idx in range(2):
+            from ngrams import Ngrams
+            ngrams = Ngrams(readonly=False, index=idx)
+            ngrams.generate()
+            ngrams.close()
         ngrams = Ngrams(readonly=True)
         ngrams.print_stats()
         ngrams.close()
@@ -46,9 +49,11 @@ class NgramsTest(unittest.TestCase):
     def test_get_nexts(self):
         self.prepare_train_file()
         from ngrams import Ngrams
-        ngrams = Ngrams(readonly=False)
-        ngrams.generate()
-        ngrams.close()
+        for idx in range(2):
+            from ngrams import Ngrams
+            ngrams = Ngrams(readonly=False, index=idx)
+            ngrams.generate()
+            ngrams.close()
         ngrams = Ngrams(readonly=True)
         values = [3,4,5,6,7]
         arr =  array(values, dtype = uint16)

@@ -103,9 +103,12 @@ def do_tokenstats(args):
     stats.print()
 
 def do_ngrams(args):
-    ngrams = Ngrams(readonly=False)
-    ngrams.generate()
-    ngrams.close()
+    if (args == None):
+        log.error("Wrong number of arguments for command ngrams")
+    else:
+        ngrams = Ngrams(readonly=False, index = int(args[0]))
+        ngrams.generate()
+        ngrams.close()
 
 def do_startindex(args):
     tokenizer = Tokenizer()
