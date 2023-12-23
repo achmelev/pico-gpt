@@ -3,7 +3,8 @@ from environment import log, workDir, get_int_config_value
 from os import mkdir
 from os.path import isfile, isdir 
 from numpy import memmap, uint16
-from hashlib import md5
+from progress import Progress
+
 
 class Ngrams:
     def __init__(self, readonly = True):
@@ -96,9 +97,14 @@ class Ngrams:
 
         chunk_size = self.ngram_size+1
 
+        log.info("Scanning train data...")
+        progress = Progress(len(self.train_data)-chunk_size-1, 100)
         for idx in range(len(self.train_data)-chunk_size):
             chunk = self.train_data[idx:idx+chunk_size]
             self.writeChunk(chunk)
+            progress.update(idx)
+        log.info("Done")
+        log.info("Flushing cache")
         self.flushWriteCaches()
         log.info("Done")
     

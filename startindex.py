@@ -3,6 +3,7 @@ from environment import log, workDir, get_int_config_value
 from os.path import isfile, isdir 
 from numpy import memmap, uint32,uint16,array
 from random import randint
+from progress import Progress
 
 class StartIndex:
 
@@ -24,14 +25,16 @@ class StartIndex:
     
     def generate(self, startToken):
         assert not self.readonly,'is in read mode'
+
         log.info('Generating startindex.')
         log.info('Scanning train data file...')
         result = []
-        for idx in range(self.length):
+        
+        progress = Progress(self.length-1, 100)
+        for idx  in range(self.length):
             if self.data[idx] == startToken:
                 result.append(idx)
-            if (idx%10000==0):
-                log.debug(idx)
+            progress.update(idx)
         log.info('Scanning done. Got '+str(len(result))+" positions")
         log.info("Writing to file...")
         arr =  array(result, dtype = uint32)

@@ -16,6 +16,7 @@ from profiler import profile_run
 from tokenstats import TokenStats
 from ngrams import Ngrams
 from dispress import DisPressGenerator
+from startindex import StartIndex
 
 command = argv[2]
 args = None
@@ -102,11 +103,15 @@ def do_tokenstats(args):
     stats.print()
 
 def do_ngrams(args):
-    tokenizer = Tokenizer()
-    tokenizer.load_vocab()
     ngrams = Ngrams(readonly=False)
     ngrams.generate()
     ngrams.close()
+
+def do_startindex(args):
+    tokenizer = Tokenizer()
+    tokenizer.load_vocab()
+    index = StartIndex(readonly=False)
+    index.generate(tokenizer.vocab_map['<end/>'])
 
 def do_dispress(args):
     if (args == None or len(args) < 2):
@@ -139,6 +144,8 @@ elif (command == 'ngrams'):
     do_ngrams(args)
 elif (command == 'dispress'):
     do_dispress(args)
+elif (command == 'startindex'):
+    do_startindex(args)
 else:
     raise Exception('Unknown command: '+command)
 
