@@ -111,7 +111,7 @@ class Ngrams:
         print('Got '+str(self.hashtable_size)+" shards")
         for idx in range(self.hashtable_size):
             cur = self.cursor[idx]
-            cur.execute('SELECT count(ngram) from ngrams')
+            cur.execute('SELECT max(rowid) from ngrams')
             result = cur.fetchone()[0]
             print(str(result)+" entries in the shard "+str(idx))
         print("############################################")

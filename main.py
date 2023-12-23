@@ -110,6 +110,11 @@ def do_ngrams(args):
         ngrams.generate()
         ngrams.close()
 
+def do_ngrams_stats(args):
+    ngrams = Ngrams(readonly=True)
+    ngrams.print_stats()
+    ngrams.close()
+
 def do_startindex(args):
     tokenizer = Tokenizer()
     tokenizer.load_vocab()
@@ -145,6 +150,8 @@ elif (command == 'tokenstats'):
     do_tokenstats(args)
 elif (command == 'ngrams'):
     do_ngrams(args)
+elif (command == 'ngrams-stats'):
+    do_ngrams_stats(args)
 elif (command == 'dispress'):
     do_dispress(args)
 elif (command == 'startindex'):
