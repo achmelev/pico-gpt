@@ -2,7 +2,7 @@ from sqlite3 import connect
 from environment import log, workDir, get_int_config_value
 from os import mkdir
 from os.path import isfile, isdir 
-from numpy import memmap, uint16
+from numpy import memmap, uint16, array
 from progress import Progress
 
 
@@ -122,7 +122,8 @@ class Ngrams:
         assert len(ngram) == self.ngram_size,'Wrong ngram size: '+str(len(ngram))
         assert self.readonly,'opened in write mode'
         assert self.active,'ngrams not active'
-        ngram_bytes = ngram.tobytes()
+        arr =  array(ngram, dtype = uint16)
+        ngram_bytes = arr.tobytes()
         cur = self.cursor[self.getNgramsShardIndex(ngram_bytes)]
         values = [ngram_bytes]
         cur.execute('SELECT next from ngrams where ngram = ?',values)

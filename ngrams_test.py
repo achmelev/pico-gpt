@@ -56,8 +56,7 @@ class NgramsTest(unittest.TestCase):
             ngrams.close()
         ngrams = Ngrams(readonly=True)
         values = [3,4,5,6,7]
-        arr =  array(values, dtype = uint16)
-        result = ngrams.get_ngram_nexts(arr)
+        result = ngrams.get_ngram_nexts(values)
         self.assertEqual(3, len(result))
         for i in result:
             self.assertEqual(8,i)
