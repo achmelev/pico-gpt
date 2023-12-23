@@ -15,5 +15,5 @@ class Progress:
         new_progress = int(float(self.progress_length)*float(idx)/float(self.max))
         if (new_progress > self.progress):
             self.progress = new_progress
-            print("Done "+str(self.progress)+" of "+str(self.progress_length)+"\r", end = "")
+            print("Done "+str(self.progress)+" of "+str(self.progress_length))
 
