@@ -98,7 +98,7 @@ class Ngrams:
         chunk_size = self.ngram_size+1
 
         log.info("Scanning train data...")
-        progress = Progress(len(self.train_data)-chunk_size-1, 100)
+        progress = Progress(len(self.train_data)-chunk_size-1, 1000)
         for idx in range(len(self.train_data)-chunk_size):
             chunk = self.train_data[idx:idx+chunk_size]
             self.writeChunk(chunk)
