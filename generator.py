@@ -6,6 +6,7 @@ from model import GPT, print_config
 import torch
 from torch.nn import functional as F
 from os.path import isfile
+from ngrams import Ngrams
 
 class TextGenerator:
 
@@ -41,11 +42,14 @@ class TextGenerator:
             self.start_tokens = self.tokenizer.tokenize_text(prompt)
             if (self.start_tokens == None):
                 self.start_tokens = ['<end/>']
-            start_ids = [self.tokenizer.vocab_map[t] for t in self.start_tokens]
+            self.start_ids = [self.tokenizer.vocab_map[t] for t in self.start_tokens]
         else:
-            start_ids = [startToken]
+            self.start_ids = [startToken]
         
-        self.ctx = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
+        self.ctx = (torch.tensor(self.start_ids, dtype=torch.long, device=device)[None, ...])
+
+        #Ngrams
+        self.ngrams = Ngrams(readonly=True)
 
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
@@ -98,6 +102,7 @@ class TextGenerator:
         current_word = ""
         prompt_counter = 0
         token_counter = 0
+        result_tokens = []+self.start_ids
         while (True):
             # Get next token
             if (prompt_counter < len(self.start_tokens)):
@@ -105,6 +110,7 @@ class TextGenerator:
                 prompt_counter+=1
             else:
                 token = self.generate_token()
+                result_tokens.append(self.tokenizer.vocab_map[token])
             token_counter+=1
             if token == '<end/>':
                 if len(current_word) >0:
@@ -137,6 +143,9 @@ class TextGenerator:
                 current_word = current_word+token
         print("#####################################################")
         log.info("Done! Generated "+str(words_counter)+" words, "+str(token_counter)+" tokens")
+        if self.ngrams.active:
+            covered_tokens = self.ngrams.get_ngram_coverage(result_tokens)
+            log.info("Ngrams coverage: "+str(int(round(float(covered_tokens)*100.0/float(len(result_tokens)))))+"%")
 
 
 
