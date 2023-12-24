@@ -36,16 +36,27 @@ class DisPressGenerator:
         next_tokens = self.ngrams.get_ngram_nexts(self.ctx)
         if (len(next_tokens) == 1):
             idx = 0
+            random = False
         else:
             idx = randint(0,len(next_tokens)-1)
             self.tokens_generated_random+=1
+            random = True
         next_token  = next_tokens[idx]
+        if random:
+            self.stretch_lengths.append(len(self.stretch))
+            self.next_lengths.append(len(next_tokens))
+            self.stretch = self.ctx[1:]+[next_token]
+        else:
+            self.stretch = self.stretch+[next_token]
         self.ctx = self.ctx[1:]+[next_token]
         return self.tokenizer.vocab[next_token]
 
     def prepare(self):
         idx = self.startindex.getRandomPos()
         self.ctx = self.train_data[idx:idx+self.ngram_size].tolist()
+        self.stretch = []+self.ctx
+        self.stretch_lengths = []
+        self.next_lengths = []
         self.start_tokens = [self.tokenizer.vocab[t] for t in self.ctx]
 
     def generate_console(self):
@@ -57,7 +68,7 @@ class DisPressGenerator:
         current_word = ""
         prompt_counter = 0
         token_counter = 0
-        self.tokens_generated_random = 0
+        self.tokens_generated_random = 0 
         while (True):
             # Get next token
             if (prompt_counter < len(self.start_tokens)):
@@ -100,7 +111,8 @@ class DisPressGenerator:
                 current_word = current_word+token
         print("#####################################################")
         log.info("Done! Generated "+str(words_counter)+" words, "+str(token_counter)+" tokens, "+str(self.tokens_generated_random)+" randomly")
-
+        log.info("Stretches from training data: "+str(self.stretch_lengths))
+        log.info("Choice counts from training data: "+str(self.next_lengths))
 
     
     def generate(self):
