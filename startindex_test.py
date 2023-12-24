@@ -14,10 +14,19 @@ class StartIndexTest(unittest.TestCase):
         arr =  array(self.values, dtype = uint16)
         f.write(arr.tobytes())
         f.close()
+    
+    def prepare_val_file(self):
+        from environment import workDir
+        f = open(workDir+"val.bin",'wb')
+        self.values_val = [0,1,2,3,4,5,6,7,8,9,0,1,2,3]
+        arr =  array(self.values_val, dtype = uint16)
+        f.write(arr.tobytes())
+        f.close()
 
     def setUp(self) -> None:
         initEnv('unittest')
         self.prepare_train_file()
+        self.prepare_val_file()
         
     
     def tearDown(self) -> None:
@@ -41,6 +50,9 @@ class StartIndexTest(unittest.TestCase):
         for idx in range(10):
             pos = index.getRandomPos()
             self.assertEqual(self.values[pos], 2)
+        for idx in range(10):
+            pos = index.getValRandomPos()
+            self.assertEqual(self.values_val[pos], 2)
 
         
     
