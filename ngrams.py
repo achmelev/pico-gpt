@@ -128,8 +128,32 @@ class Ngrams:
         values = [ngram_bytes]
         cur.execute('SELECT next from ngrams where ngram = ?',values)
         sqlresult =  cur.fetchall()
-        cur.close()
         return [x[0] for x in sqlresult]
+    
+    def get_ngram_coverage(self, tokens):
+        covered_tokens = 0
+        idx = 0
+        first=True
+        while idx < len(tokens)-self.ngram_size+1:
+            ngram = tokens[idx:idx+self.ngram_size]
+            nexts = self.get_ngram_nexts(ngram)
+            if (len(nexts)>0):
+                if first:
+                    covered_tokens+=self.ngram_size
+                    first=False
+                else:
+                    covered_tokens+=1
+                idx+=1
+            else:
+                if first:
+                    idx+=1
+                else:
+                    idx+=(self.ngram_size-1)
+                    first = True
+        return covered_tokens
+
+
+
     
     def close(self):
         if (self.readonly):

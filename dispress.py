@@ -3,20 +3,19 @@ from os.path import isfile, isdir
 from numpy import memmap, uint16
 from tokenizer import Tokenizer
 import torch
+from startindex import StartIndex
+from ngrams import Ngrams
 from random import randint
 
 class DisPressGenerator:
 
-    def __init__(self, size, max_length):
+    def __init__(self):
         assert isfile(workDir+'train.bin'), 'Missing train data file'
         self.train_data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
 
         self.tokenizer = Tokenizer()
         self.tokenizer.load_vocab()
 
-        self.context_size = size
-        self.depth = size+1
-        self.max_length = max_length
         self.max_words = get_int_config_value("max_words")
         self.max_line_length = get_int_config_value("max_line_length")
 
@@ -26,52 +25,28 @@ class DisPressGenerator:
 
         self.vocab_size = get_int_config_value('vocab_size')
 
-    def generate_stats(self):
-        log.info("Generate stats...")
-        end_token = self.tokenizer.vocab_map['<end/>']
-        for idx in range(self.max_length-self.depth-10):
-            if (idx%10000 == 0):
-                log.debug(idx)
-            chunk = self.train_data[idx:idx+self.depth]
-            if (chunk[0] == end_token):
-                self.start_pos.append(idx)
-            chunk_tuple = tuple(chunk.tolist())
-            if chunk_tuple in self.stats:
-                self.stats[chunk_tuple]+=1
-            else:
-                self.stats[chunk_tuple] = 1
-        log.info("Done")
-    
-    def get_next_token_probs(self, chunk):
-        result = torch.zeros(self.vocab_size)
-        for t in range(self.vocab_size):
-            chunk_tuple = tuple(chunk+[t])
-            if (chunk_tuple in self.stats):
-                result[t] = float(self.stats[chunk_tuple])
-        return result
+        
+        self.ngram_size = self.ngram_size = get_int_config_value('ngram_size')
+        self.startindex = StartIndex(readonly=True)
+        self.ngrams = Ngrams(readonly=True)
+
+
 
     def generate_token(self) -> str:
-        #Get Probs
-        probs = self.get_next_token_probs(self.ctx)
-        sum = torch.sum(probs)
-        if (sum.item() > 1.0):
-            self.tokens_generated_random+=1
-        
-        if (sum.item() == 0.0):
-            return None
+        next_tokens = self.ngrams.get_ngram_nexts(self.ctx)
+        if (len(next_tokens) == 1):
+            idx = 0
         else:
-            # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            # append sampled index to the running sequence and continue
-            self.ctx = self.ctx[1:]+[idx_next.item()]
-
-            return self.tokenizer.vocab[idx_next]
+            idx = randint(0,len(next_tokens)-1)
+            self.tokens_generated_random+=1
+        next_token  = next_tokens[idx]
+        self.ctx = self.ctx[1:]+[next_token]
+        return self.tokenizer.vocab[next_token]
 
     def prepare(self):
-        idx = randint(0, len(self.start_pos)-1)
-        self.ctx = self.train_data[self.start_pos[idx]:self.start_pos[idx]+self.context_size].tolist()
+        idx = self.startindex.getRandomPos()
+        self.ctx = self.train_data[idx:idx+self.ngram_size].tolist()
         self.start_tokens = [self.tokenizer.vocab[t] for t in self.ctx]
-
 
     def generate_console(self):
         log.info("Generating...")
@@ -127,11 +102,8 @@ class DisPressGenerator:
         log.info("Done! Generated "+str(words_counter)+" words, "+str(token_counter)+" tokens, "+str(self.tokens_generated_random)+" randomly")
 
 
-
-
     
     def generate(self):
-        self.generate_stats()
         self.prepare()
         self.generate_console()
     

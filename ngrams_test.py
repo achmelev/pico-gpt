@@ -60,6 +60,23 @@ class NgramsTest(unittest.TestCase):
         self.assertEqual(3, len(result))
         for i in result:
             self.assertEqual(8,i)
+    
+    def test_get_coverage(self):
+        self.prepare_train_file()
+        from ngrams import Ngrams
+        for idx in range(2):
+            from ngrams import Ngrams
+            ngrams = Ngrams(readonly=False, index=idx)
+            ngrams.generate()
+            ngrams.close()
+        ngrams = Ngrams(readonly=True)
+        tokens = [1,2,3,4,5,6,7,0,1,2,3,4]
+        result = ngrams.get_ngram_coverage(tokens)
+        self.assertEqual(len(tokens), result)
+        tokens = [9,1,2,3,4,5,6,7,9,8,0,1,2,3,4,5,8]
+        result = ngrams.get_ngram_coverage(tokens)
+        self.assertEqual(len(tokens)-4, result)
+        
         
     
     

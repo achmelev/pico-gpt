@@ -122,11 +122,8 @@ def do_startindex(args):
     index.generate(tokenizer.vocab_map['<end/>'])
 
 def do_dispress(args):
-    if (args == None or len(args) < 2):
-        log.error("Wrong number of arguments for command tokenize")
-    else:
-        generator = DisPressGenerator(int(args[0]), int(args[1]))
-        generator.generate()
+    generator = DisPressGenerator()
+    generator.generate()
         
 if (command == 'vocab'):
     do_vocab(args)
