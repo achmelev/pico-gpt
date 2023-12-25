@@ -7,7 +7,7 @@ from progress import Progress
 from os.path import getsize
 
 def hasStartIndex():
-    isfile(workDir+"startindex.bin") and isfile(workDir+"startindex_val.bin")
+    return isfile(workDir+"startindex.bin") and isfile(workDir+"startindex_val.bin")
 
 class StartIndex:
 
@@ -78,7 +78,7 @@ class StartIndex:
                 result.append(idx)
             progress.update(idx)
         log.info('Scanning done. Got '+str(len(result))+" positions")
-        log.info("Writing to file...")
+        log.info("Writing to "+str(out))
         arr =  array(result, dtype = uint32)
         f = open(out,"wb")
         arr.tofile(f)
