@@ -33,16 +33,29 @@ class StartIndexTest(unittest.TestCase):
         from environment import workDir
         rmtree(workDir)
     
-
-
     def test_generate(self):
-        self.prepare_train_file()
         from startindex import StartIndex
         index = StartIndex(readonly=False)
         index.generate(2)
     
+    def test_right_padding(self):
+        from startindex import StartIndex
+        index = StartIndex(readonly=False)
+        index.generate(2)
+        index = StartIndex(readonly=True, rightPadding=2)
+        self.assertEqual(index.length, 3)
+        self.assertEqual(index.length_val, 1)
+        index = StartIndex(readonly=True, rightPadding=5)
+        self.assertEqual(index.length, 3)
+        self.assertEqual(index.length_val, 1)
+
+        index = StartIndex(readonly=False)
+        index.generate(8)
+        index = StartIndex(readonly=True, rightPadding=5)
+        self.assertEqual(index.length, 2)
+        self.assertEqual(index.length_val, 1)
+    
     def test_get_random_pos(self):
-        self.prepare_train_file()
         from startindex import StartIndex
         index = StartIndex(readonly=False)
         index.generate(2)

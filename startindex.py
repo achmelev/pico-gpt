@@ -4,27 +4,39 @@ from os.path import isfile, isdir
 from numpy import memmap, uint32,uint16,array
 from random import randint
 from progress import Progress
+from os.path import getsize
 
 class StartIndex:
 
-    def __init__(self, readonly = True):
+    def __init__(self, readonly = True, rightPadding = 0):
         self.readonly = readonly
         if (self.readonly):
+            assert isfile(workDir+"train.bin"), "no train data file found!"
+            assert isfile(workDir+"val.bin"), "no val data file found!"
             assert isfile(workDir+"startindex.bin"), "no startindex file found!"
             assert isfile(workDir+"startindex_val.bin"), "no startindex val file found!"
             self.data = memmap(workDir+'startindex.bin', dtype=uint32, mode='r')
+            self.data = self.applyRightPadding(self.data, rightPadding, getsize(workDir+"train.bin")/2)
             self.length = len(self.data)
             self.data_val = memmap(workDir+'startindex_val.bin', dtype=uint32, mode='r')
+            self.data_val = self.applyRightPadding(self.data_val, rightPadding, getsize(workDir+"val.bin")/2)
             self.length_val = len(self.data_val)
         else:
-            assert isfile(workDir+"train.bin"), "train data file found!"
-            assert isfile(workDir+"val.bin"), "val data file found!"
+            assert isfile(workDir+"train.bin"), "no train data file found!"
+            assert isfile(workDir+"val.bin"), "no val data file found!"
             self.data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
             self.length = len(self.data)
             self.data_val = memmap(workDir+'val.bin', dtype=uint16, mode='r')
             self.length_val = len(self.data_val)
             
-            
+    def applyRightPadding(self, startIndex,rightPadding, dataLength):
+        if (rightPadding <=0):
+            return startIndex
+        cutOff = len(startIndex)
+        while (startIndex[cutOff-1]>=dataLength-rightPadding):
+            cutOff-=1
+        return startIndex[:cutOff]
+
     def getRandomPos(self):
         assert self.readonly,'is in writing mode'
         idx = randint(0, self.length-1)
