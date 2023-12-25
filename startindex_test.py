@@ -64,8 +64,17 @@ class StartIndexTest(unittest.TestCase):
             pos = index.getRandomPos()
             self.assertEqual(self.values[pos], 2)
         for idx in range(10):
-            pos = index.getValRandomPos()
+            pos = index.getRandomPos(train=False)
             self.assertEqual(self.values_val[pos], 2)
+        
+        result = index.getRandomPos(count=10)
+        self.assertEqual(10, len(result))
+        for idx in range(10):
+            self.assertEqual(self.values[result[idx]], 2)
+        result = index.getRandomPos(count=10, train=False)
+        self.assertEqual(10, len(result))
+        for idx in range(10):
+            self.assertEqual(self.values_val[result[idx]], 2)
 
         
     

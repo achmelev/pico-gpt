@@ -6,6 +6,9 @@ from random import randint
 from progress import Progress
 from os.path import getsize
 
+def hasStartIndex():
+    isfile(workDir+"startindex.bin") and isfile(workDir+"startindex_val.bin")
+
 class StartIndex:
 
     def __init__(self, readonly = True, rightPadding = 0):
@@ -37,20 +40,23 @@ class StartIndex:
             cutOff-=1
         return startIndex[:cutOff]
 
-    def getRandomPos(self):
+    def getRandomPos(self, count = 1, train=True):
         assert self.readonly,'is in writing mode'
-        idx = randint(0, self.length-1)
-        return int(self.data[idx])
-    
-    def getValRandomPos(self):
-        assert self.readonly,'is in writing mode'
-        idx = randint(0, self.length_val-1)
-        return int(self.data_val[idx])
-    
+        length = self.length if train else self.length_val
+        data = self.data if train else self.data_val
+        if (count == 1):
+            idx = randint(0, length-1)
+            return int(data[idx])
+        else:
+            result = []
+            for i in range(count):
+                idx = randint(0, length-1)
+                result.append(int(data[idx]))
+            return result
+        
     def do_generate(self, startToken, train):
         assert not self.readonly,'is in read mode'
 
-        
         if train:
             log.info('Scanning train data file...')
         else:
