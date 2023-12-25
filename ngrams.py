@@ -6,6 +6,9 @@ from numpy import memmap, uint16, array
 from progress import Progress
 
 
+def hasNgrams():
+    return isdir(workDir+"ngrams")
+
 class Ngrams:
     def __init__(self, readonly = True, index = 0):
         self.ngram_size = get_int_config_value('ngram_size')

@@ -6,7 +6,7 @@ from model import GPT, print_config
 import torch
 from torch.nn import functional as F
 from os.path import isfile
-from ngrams import Ngrams
+from ngrams import Ngrams, hasNgrams
 
 class TextGenerator:
 
@@ -49,7 +49,8 @@ class TextGenerator:
         self.ctx = (torch.tensor(self.start_ids, dtype=torch.long, device=device)[None, ...])
 
         #Ngrams
-        self.ngrams = Ngrams(readonly=True)
+        if (hasNgrams()):
+            self.ngrams = Ngrams(readonly=True)
 
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
@@ -143,7 +144,7 @@ class TextGenerator:
                 current_word = current_word+token
         print("#####################################################")
         log.info("Done! Generated "+str(words_counter)+" words, "+str(token_counter)+" tokens")
-        if self.ngrams.active:
+        if hasNgrams():
             covered_tokens = self.ngrams.get_ngram_coverage(result_tokens)
             log.info("Ngrams coverage: "+str(int(round(float(covered_tokens)*100.0/float(len(result_tokens)))))+"%")
 
