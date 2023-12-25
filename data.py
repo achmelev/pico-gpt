@@ -17,7 +17,7 @@ class DataLoader:
         self.useStartIndex = useStartIndex
         if (self.useStartIndex == None):
             self.useStartIndex = get_bool_config_value("use_start_index")
-        if (useStartIndex):
+        if (self.useStartIndex):
             assert hasStartIndex(),"no start index found"
             log.info("Getting samples start positions from index")
             self.startIndex = StartIndex(readonly=True, rightPadding=self.block_size)
