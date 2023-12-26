@@ -1,4 +1,4 @@
-from environment import log, device, get_int_config_value, get_float_config_value, workDir
+from environment import log, device, get_int_config_value, get_float_config_value,get_bool_config_value, workDir
 from tokenizer import Tokenizer
 from model import GPT, print_config
 
@@ -36,6 +36,9 @@ class TextGenerator:
             log.info("Loading model from "+self.model_file)
             self.model.load_state_dict(torch.load(self.model_file, map_location = torch.device(device)))
         self.model.eval()
+
+        #StartIndex 
+        self.useStartIndex = get_bool_config_value("use_start_index")
         
         #Context
         if (prompt != None):
@@ -43,6 +46,8 @@ class TextGenerator:
             if (self.start_tokens == None):
                 self.start_tokens = ['<end/>']
             self.start_ids = [self.tokenizer.vocab_map[t] for t in self.start_tokens]
+            if (self.useStartIndex):
+                self.start_ids = [self.tokenizer.vocab_map['<end/>']]+self.start_ids
         else:
             self.start_ids = [startToken]
         
@@ -51,6 +56,8 @@ class TextGenerator:
         #Ngrams
         if (hasNgrams()):
             self.ngrams = Ngrams(readonly=True)
+        
+        
 
     @torch.no_grad()
     def get_next_token_probs(self, logits, temperature, top_p):
