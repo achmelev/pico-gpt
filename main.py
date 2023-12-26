@@ -17,6 +17,7 @@ from tokenstats import TokenStats
 from ngrams import Ngrams
 from dispress import DisPressGenerator
 from startindex import StartIndex
+from score import Score
 
 command = argv[2]
 args = None
@@ -124,6 +125,13 @@ def do_startindex(args):
 def do_dispress(args):
     generator = DisPressGenerator()
     generator.generate()
+
+def do_score(args):
+    if (args == None):
+        log.error("Wrong number of arguments for command score")
+    else:
+        score = Score()
+        log.info("Score = "+str(score.calculate(args[0])))
         
 if (command == 'vocab'):
     do_vocab(args)
@@ -153,6 +161,8 @@ elif (command == 'dispress'):
     do_dispress(args)
 elif (command == 'startindex'):
     do_startindex(args)
+elif (command == 'score'):
+    do_score(args)
 else:
     raise Exception('Unknown command: '+command)
 
