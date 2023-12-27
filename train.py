@@ -188,6 +188,8 @@ class Trainer:
         calculationTime = 0.0
         iter_counter = 0
         min_val_loss_counter = 0
+        loss_sum = 0.0
+        loss_sum_counter = 0
         
 
         #Timers
@@ -249,9 +251,13 @@ class Trainer:
             calc_end_time = time()
             calculationTime +=(calc_end_time-calc_start_time)
             iter_counter+=1
+            loss_sum+=loss.item()
+            loss_sum_counter+=1
             self.lr_counter+= 1
             if (iter_counter == 1 or iter_counter%self.log_interval == 0):
-                log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", last loss = "+str(loss.item()))
+                log.info("Iteration "+str(iter_counter)+" last learning rate = "+str(lr)+", mean train loss = "+str(loss_sum/loss_sum_counter))
+                loss_sum = 0.0
+                loss_sum_counter = 0
                 self.log_cuda_memory_usage('')
             #Cleaning memory (hopefully)
              # zero the parameter gradients
@@ -267,7 +273,8 @@ class Trainer:
                 stop('loop')
                 log.info("######################################Epoch Report#######################################################")
                 current_val_loss = val_loss/self.eval_iters
-                log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(train_loss/self.eval_iters)+", mean validation loss = "+str(current_val_loss))
+                current_train_loss = train_loss/self.eval_iters
+                log.info('Epoch '+str(epochCounter)+" done, mean train loss = "+str(current_train_loss)+", mean validation loss = "+str(current_val_loss)+", gap = "+str(current_val_loss-current_train_loss))
                 log.info('Running '+get_time_sum_fmt('loop')+", "+str(get_time_avg('loop'))+" sec per iteration")
                 log.info('-Training time '+get_time_sum_fmt('train')+", "+str(get_time_avg('train'))+" sec per iteration")
                 log.info("--Batch training time "+get_time_sum_fmt('train_batch')+", "+str(get_time_avg('train_batch'))+" sec per iteration")
