@@ -47,6 +47,9 @@ class Score:
         else:
             input_tokens = tokens
         
+        if (len(input_tokens) > self.block_size):
+            input_tokens = input_tokens[:self.block_size]
+
         input_tokens_tensor = torch.tensor(input_tokens,dtype=torch.int64)
         input_tokens_tensor = input_tokens_tensor[None, :]
         logits = self.model(input_tokens_tensor)
@@ -58,6 +61,14 @@ class Score:
     def calculate(self, text):
         text_tokens = self.tokenizer.tokenize_text(text)
         tokens = [self.tokenizer.vocab_map[t] for t in text_tokens]
+        return self.calculate_loss(tokens)
+    
+    def calculate_from_file(self, file):
+        tokens_list = self.tokenizer.tokenizeFile(file)
+        tokens = []
+        for sublist in tokens_list:
+            tokens+=sublist
+        log.debug("Got "+str(len(tokens))+" Tokens.")
         return self.calculate_loss(tokens)
 
 

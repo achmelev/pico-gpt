@@ -131,7 +131,13 @@ def do_score(args):
         log.error("Wrong number of arguments for command score")
     else:
         score = Score()
-        log.info("Score = "+str(score.calculate(args[0])))
+        if (len(args)>1):
+            if (args[0] == '-file'):
+                log.info("Score = "+str(score.calculate_from_file(args[1])))
+            else:
+                log.info("Score = "+str(score.calculate(args[0])))
+        else:
+            log.info("Score = "+str(score.calculate(args[0]))) 
         
 if (command == 'vocab'):
     do_vocab(args)
