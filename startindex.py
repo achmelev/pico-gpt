@@ -7,7 +7,7 @@ from progress import Progress
 from os.path import getsize
 
 def hasStartIndex():
-    return isfile(workDir+"startindex.bin") and isfile(workDir+"startindex_val.bin")
+    return isfile(workDir+"startindex.bin")
 
 class StartIndex:
 
