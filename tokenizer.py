@@ -10,8 +10,13 @@ from multiprocessing import Process, Queue
 
 
 class Tokenizer:
-   def  __init__(self):
+   def  __init__(self, validationOf = None):
 
+      #Without validation set
+      if (validationOf == None):
+         self.validationOff = get_bool_config_value('validation_off')
+      else:
+         self.validationOff = validationOf
       #get regex pattern
       self.punctuation = get_config_value('punctuation_chars')
       wordPatternStr = r'\w[\w\’]*|['+self.punctuation+']'
@@ -412,7 +417,11 @@ class Tokenizer:
       f = open(workDir+'train.bin', 'wb')
       allTokensCounter = 0
       validationCut = numberOfTokens*train_dataset_percent/100
-      
+
+      if self.validationOff:
+         log.info('validation set is disabled')
+         validationCut = numberOfTokens
+
       for wd in workersDataOut:
          listLengths = wd[1]
          tmpdata =  np.memmap(wd[2], dtype=np.uint16, mode='r')

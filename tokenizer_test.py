@@ -3,7 +3,7 @@ import unittest
 from environment import initEnv
 from shutil import rmtree
 import numpy as np
-from os.path import join
+from os.path import join, isfile
 
 
 class TokenizerTest (unittest.TestCase):
@@ -50,7 +50,7 @@ class TokenizerTest (unittest.TestCase):
         from tokenizer import Tokenizer
         log.debug('TEST TOKENIZE')
         tokenizer = Tokenizer()
-        input_file = __file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_input.txt'
+        input_file = __file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_cleaned.txt'
         tokenizer.generate_vocab(input_file)
 
         tokenizer.tokenize(input_file)
@@ -59,6 +59,29 @@ class TokenizerTest (unittest.TestCase):
         val_data = np.memmap(join(workDir, 'val.bin'), dtype=np.uint16, mode='r')
 
         all_tokens = np.concatenate((train_data, val_data))
+
+        text_again = tokenizer.tokens_to_text(all_tokens)
+        compare_file = open(__file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_cleaned.txt','r')
+        compare_text = compare_file.read()
+        compare_file.close()
+
+        self.assertEqual(len(text_again), len(compare_text))
+        self.assertEqual(text_again, compare_text)
+    
+    def test_tokenize_validation_off(self):
+        from environment import log, workDir
+        from tokenizer import Tokenizer
+        log.debug('TEST TOKENIZE')
+        tokenizer = Tokenizer(validationOf=True)
+        input_file = __file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_cleaned.txt'
+        tokenizer.generate_vocab(input_file)
+
+        tokenizer.tokenize(input_file)
+
+        self.assertFalse(isfile(join(workDir, 'val.bin')))
+
+        train_data = np.memmap(join(workDir, 'train.bin'), dtype=np.uint16, mode='r')
+        all_tokens = train_data
 
         text_again = tokenizer.tokens_to_text(all_tokens)
         compare_file = open(__file__[:__file__.rfind('/')]+'/testdaten/erlkoenig_cleaned.txt','r')
