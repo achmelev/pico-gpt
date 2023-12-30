@@ -3,6 +3,7 @@ import unittest
 from environment import initEnv
 from shutil import rmtree
 from numpy import array, uint16
+from os.path import isfile
 
 
 class StartIndexTest(unittest.TestCase):
@@ -38,6 +39,13 @@ class StartIndexTest(unittest.TestCase):
         index = StartIndex(readonly=False)
         index.generate(2)
     
+    def test_generate_validationOff(self):
+        from environment import workDir
+        from startindex import StartIndex
+        index = StartIndex(readonly=False, validationOff=True)
+        index.generate(2)
+        self.assertFalse(isfile(workDir+"startindex_val.bin"))
+    
     def test_right_padding(self):
         from startindex import StartIndex
         index = StartIndex(readonly=False)
@@ -54,6 +62,23 @@ class StartIndexTest(unittest.TestCase):
         index = StartIndex(readonly=True, rightPadding=5)
         self.assertEqual(index.length, 2)
         self.assertEqual(index.length_val, 1)
+    
+    def test_right_padding_validationOff(self):
+        from startindex import StartIndex
+        from environment import workDir
+        index = StartIndex(readonly=False, validationOff=True)
+        index.generate(2)
+        self.assertFalse(isfile(workDir+"startindex_val.bin"))
+        index = StartIndex(readonly=True, rightPadding=2,validationOff=True)
+        self.assertEqual(index.length, 3)
+        index = StartIndex(readonly=True, rightPadding=5,validationOff=True)
+        self.assertEqual(index.length, 3)
+
+        index = StartIndex(readonly=False, validationOff=True)
+        index.generate(8)
+        index = StartIndex(readonly=True, rightPadding=5,validationOff=True)
+        self.assertFalse(isfile(workDir+"startindex_val.bin"))
+        self.assertEqual(index.length, 2)
     
     def test_get_random_pos(self):
         from startindex import StartIndex
@@ -75,10 +100,23 @@ class StartIndexTest(unittest.TestCase):
         self.assertEqual(10, len(result))
         for idx in range(10):
             self.assertEqual(self.values_val[result[idx]], 2)
+    
+    def test_get_random_pos_ValidationOff(self):
+        from startindex import StartIndex
+        from environment import workDir
+        index = StartIndex(readonly=False,validationOff=True)
+        index.generate(2)
+        self.assertFalse(isfile(workDir+"startindex_val.bin"))
+        index = StartIndex(readonly=True,validationOff=True)
+        for idx in range(10):
+            pos = index.getRandomPos()
+            self.assertEqual(self.values[pos], 2)
+        
+        result = index.getRandomPos(count=10)
+        self.assertEqual(10, len(result))
+        for idx in range(10):
+            self.assertEqual(self.values[result[idx]], 2)
 
-        
-    
-    
-        
+
 if __name__ == '__main__':
     unittest.main()
