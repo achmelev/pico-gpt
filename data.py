@@ -7,11 +7,18 @@ from startindex import StartIndex, hasStartIndex
 
 class DataLoader:
 
-    def __init__(self, useStartIndex = None):
+    def __init__(self, useStartIndex = None, validationOff = None):
+        #Without validation set
+        if (validationOff == None):
+            self.validationOff = get_bool_config_value('validation_off')
+        else:
+            self.validationOff = validationOff
         assert isfile(workDir+'train.bin'), 'Missing train data file'
-        assert isfile(workDir+'val.bin'), 'Missing validation data file'
+        if not self.validationOff:
+            assert isfile(workDir+'val.bin'), 'Missing validation data file'
         self.train_data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
-        self.val_data = memmap(workDir+'val.bin', dtype=uint16, mode='r')
+        if not self.validationOff:
+            self.val_data = memmap(workDir+'val.bin', dtype=uint16, mode='r')
         self.block_size = get_int_config_value("block_size")
         self.batch_size = get_int_config_value("batch_size")
         self.useStartIndex = useStartIndex
@@ -31,6 +38,8 @@ class DataLoader:
             return randint(len(data) - self.block_size, (self.batch_size,))
     
     def batch(self, train = True):
+        if not train:
+            assert not self.validationOff,'validation file disabled'
         data = self.train_data if train else self.val_data
         ix = self.getStartIndexes(train)
         samples = stack([from_numpy((data[i:i+self.block_size]).astype(int64)) for i in ix])

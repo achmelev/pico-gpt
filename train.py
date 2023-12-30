@@ -13,6 +13,8 @@ from pickle import dump, load
 
 class Trainer:
     def __init__(self, minutes_to_train):
+        #validation set 
+        self.validationOff = get_bool_config_value('validation_off')
         #Params
         self.minutes_to_train = minutes_to_train
         self.weight_decay = get_float_config_value('weight_decay')
