@@ -152,23 +152,26 @@ class Trainer:
                 stop('validate_calc_loss')
             if (profile):
                 start('validate_batch')
-            val_batch = self.loader.batch(train=False)
-            if (profile):
-                stop('validate_batch')
-            if (profile):
-                start('validate_forward')
-            logits = self.model(val_batch[0])
-            if (profile):
-                stop('validate_forward')
-            if (profile):
-                start('validate_calc_loss')
-            loss = self.calculate_loss(logits, val_batch[1])
-            val_loss+=loss.item()
-            del val_batch
-            if (profile):
-                stop('validate_calc_loss')
+            if (not self.validationOff):
+                val_batch = self.loader.batch(train=False)
+                if (profile):
+                    stop('validate_batch')
+                if (profile):
+                    start('validate_forward')
+                logits = self.model(val_batch[0])
+                if (profile):
+                    stop('validate_forward')
+                if (profile):
+                    start('validate_calc_loss')
+                loss = self.calculate_loss(logits, val_batch[1])
+                val_loss+=loss.item()
+                del val_batch
+                if (profile):
+                    stop('validate_calc_loss')
         self.model.train()
         self.log_cuda_memory_usage('after validation')  
+        if (self.validationOff):
+            val_loss = train_loss
         return train_loss, val_loss
 
     def log_cuda_memory_usage(self, label = ''):
