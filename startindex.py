@@ -34,7 +34,8 @@ class StartIndex:
                 self.length_val = len(self.data_val)
         else:
             assert isfile(workDir+"train.bin"), "no train data file found!"
-            assert isfile(workDir+"val.bin"), "no val data file found!"
+            if not self.validationOff:
+                assert isfile(workDir+"val.bin"), "no val data file found!"
             self.data = memmap(workDir+'train.bin', dtype=uint16, mode='r')
             self.length = len(self.data)
             if not self.validationOff:
