@@ -15,6 +15,7 @@ class TextGenerator:
         #Parameters
         self.block_size = get_int_config_value('block_size')
         self.temperature = get_float_config_value('temperature')
+        self.top_k = get_int_config_value('top_k')
         self.top_p = get_float_config_value('top_p')
         self.max_line_length = get_int_config_value("max_line_length")
         self.max_words = get_int_config_value("max_words")
@@ -60,24 +61,36 @@ class TextGenerator:
         
 
     @torch.no_grad()
-    def get_next_token_probs(self, logits, temperature, top_p):
-        # apply temperature
+    def get_next_token_probs(self, logits, temperature, top_p = None, top_k = None):
+        if top_p == None:
+            top_p = self.top_p
+        if top_k == None:
+            top_k = self.top_k
         assert temperature > 0.0, "Illegal temperature "+str(temperature)
+        assert top_k >=0  and top_k <= self.vocab_size, "Illegal top_p "+str(top_p)
+        if (top_k == 0):
+            assert top_p > 0.0 and top_p <= 1.0, "Illegal top_p "+str(top_p)
         if (temperature != 1.0):
             logits = logits/temperature
         # apply softmax to convert logits to (normalized) probabilities
         probs = F.softmax(logits, dim=-1)
-        assert top_p > 0.0 and top_p <= 1.0, "Illegal top_p "+str(top_p)
         #Sort probs descending (probs doesn't change itself)
-        if (top_p < 1.0):
-            sorted = torch.sort(probs, descending = True)
-            cum_prob = 0.0
-            for i in range(self.vocab_size):
-                current_prob = sorted[0][0][i].item()
-                if (cum_prob + current_prob >= self.top_p and i>0):
-                    probs[0][sorted[1][0][i].item()] = 0.0
-                cum_prob+=current_prob
-            probs = F.normalize(probs, p = 1.0)
+        if (top_k == 0):
+            if (top_p < 1.0):
+                sorted = torch.sort(probs, descending = True)
+                cum_prob = 0.0
+                for i in range(self.vocab_size):
+                    current_prob = sorted[0][0][i].item()
+                    if (cum_prob + current_prob >= self.top_p and i>0):
+                        probs[0][sorted[1][0][i].item()] = 0.0
+                    cum_prob+=current_prob
+        else:
+           sorted = torch.sort(probs, descending = True)
+           for i in range(self.vocab_size):
+               if (i >= top_k):
+                   probs[0][sorted[1][0][i].item()] = 0.0
+            
+        probs = F.normalize(probs, p = 1.0) 
         return probs
 
 
@@ -92,7 +105,7 @@ class TextGenerator:
         logits = logits[:, -1, :] 
 
         #Get Probs
-        probs = self.get_next_token_probs(logits, self.temperature, self.top_p)
+        probs = self.get_next_token_probs(logits, self.temperature)
         
         # sample from the distribution
         idx_next = torch.multinomial(probs, num_samples=1)
