@@ -81,7 +81,7 @@ class TextGenerator:
                 cum_prob = 0.0
                 for i in range(self.vocab_size):
                     current_prob = sorted[0][0][i].item()
-                    if (cum_prob + current_prob >= self.top_p and i>0):
+                    if (cum_prob + current_prob >= top_p and i>0):
                         probs[0][sorted[1][0][i].item()] = 0.0
                     cum_prob+=current_prob
         else:

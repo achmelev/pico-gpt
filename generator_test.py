@@ -40,7 +40,7 @@ class GeneratorTest (unittest.TestCase):
         for i in range(5):
             self.assertEqual(initial_probs[i], round(probs[0][i].item(),2))
         
-        probs = generator.get_next_token_probs(temperature=1.0, top_p=0.6, logits=logits)
+        probs = generator.get_next_token_probs(temperature=1.0, top_p=0.8, logits=logits)
         log.debug("Got Probs.2: "+str(probs))
         self.assertEqual(round(torch.sum(probs).item(),2),1.0)
         for i in range(5):
@@ -70,7 +70,7 @@ class GeneratorTest (unittest.TestCase):
         for i in range(5):
             self.assertEqual(initial_probs[i], round(probs[0][i].item(),2))
         
-        probs = generator.get_next_token_probs(temperature=1.0, top_p=0.6, logits=logits)
+        probs = generator.get_next_token_probs(temperature=1.0, top_k=2, logits=logits)
         log.debug("Got Probs.2: "+str(probs))
         self.assertEqual(round(torch.sum(probs).item(),2),1.0)
         for i in range(5):
